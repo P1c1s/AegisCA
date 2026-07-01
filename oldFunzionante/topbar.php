@@ -1,5 +1,5 @@
 <div class="top-bar">
-    <div class="logo">AegisCA</div>
+    <div class="logo">🔒 Local SSL Manager</div>
     <div class="nav-links">
         <a href="index.php">Dashboard</a>
         <a href="manage_ca.php">Gestione CA</a>

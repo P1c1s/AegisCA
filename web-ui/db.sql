@@ -52,5 +52,5 @@ CREATE TABLE IF NOT EXISTS `certificates` (
 
 -- Inserimento utente amministratore di default (Username: admin, Password: admin)
 INSERT INTO `users` (`username`, `password`) 
-VALUES ('admin', '$2y$10$fWkWN9OhyW160enZ87Z09eXk6v4Pcl4PkaD9Pclh0K8L4Mep7Qv9O')
+VALUES ('admin', '$2y$10$GTAKhQTJ9J13yi.zi7Cx9.oaJLqwaE4pt5s9e.D3uqMVI.jwInc66')
 ON DUPLICATE KEY UPDATE `id`=`id`;

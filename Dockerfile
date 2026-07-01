@@ -10,7 +10,7 @@ FROM theb0ys/apache:latest
 # RUN a2enmod rewrite
 
 # Copia tutti i file del progetto dentro la cartella di Apache nel container
-COPY ./web/ /var/www/html/
+COPY ./web-ui/ /var/www/html/
 
 # Imposta i permessi corretti per l'utente di Apache (www-data)
 RUN chown -R www-data:www-data /var/www/html/

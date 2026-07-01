@@ -1,3 +1,9 @@
+<p align="center">
+  <img src="web-ui/assets/img/aegis-ca.svg" alt="Aegis CA Logo" width="168" height="270">
+  <br>
+  <em>"Aegis CA, gestore certificati"</em>
+</p>
+
 # 🔒 Aegis CA - Local Certificate Authority & SSL Manager
 
 Aegis CA è un'applicazione web leggera, sicura e autonoma progettata per la generazione, la firma e la gestione di una **Certificate Authority (CA) locale** e di **certificati SSL self-signed**. 
