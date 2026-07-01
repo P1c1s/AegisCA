@@ -53,3 +53,7 @@ Il progetto è stato sviluppato seguendo la filosofia **No-Framework**, garanten
 1. Clona la repository nella cartella del tuo server web:
    ```bash
    git clone [https://github.com/tuo-username/aegis-ca.git](https://github.com/tuo-username/aegis-ca.git)
+
+
+![Dashboard](web-ui/assets/img/dashboard.png)
+![Dashboard](web-ui/assets/img/ca.png)
