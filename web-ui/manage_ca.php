@@ -24,15 +24,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_ca'])) {
         'cn' => $_POST['common_name']
     ];
 
-    // Recuperiamo la lunghezza della chiave dalla form (se manca, per la CA il default è 4096)
     $keyBits = isset($_POST['key_bits']) ? intval($_POST['key_bits']) : 4096;
+    
+    // NUOVA MISURA: Recuperiamo la password se la checkbox è attiva
+    $encryptKey = isset($_POST['protect_with_password']);
+    $caPassword = ($encryptKey && !empty($_POST['ca_password'])) ? $_POST['ca_password'] : null;
 
-    // Passiamo $keyBits come terzo argomento della funzione createCA
-    if (SSLEngine::createCA($dnData, intval($_POST['days']), $keyBits)) {
-        $msg = 'CA Generata con Successo!'; 
-        $type = 'success';
-    } else {
-        $msg = 'Errore durante la generazione della CA.'; 
+    try {
+        // Passiamo $caPassword come QUARTO argomento del metodo createCA
+        // NOTA: Assicurati che nel tuo ssl_engine.php il metodo accetti questo argomento: 
+        // public static function createCA($dnData, $days, $keyBits, $caPassword = null)
+        if (SSLEngine::createCA($dnData, intval($_POST['days']), $keyBits, $caPassword)) {
+            $msg = 'CA Generata con Successo!'; 
+            $type = 'success';
+        } else {
+            $msg = 'Errore imprevisto durante la generazione della CA.'; 
+            $type = 'danger';
+        }
+    } catch (Exception $e) {
+        $msg = $e->getMessage();
         $type = 'danger';
     }
 }
@@ -49,7 +59,7 @@ $cas = $pdo->query("SELECT * FROM cas ORDER BY created_at DESC")->fetchAll();
     <?php include 'includes/topbar.php'; ?>
     
     <div class="container">
-        <?php if($msg): ?><div class="alert alert-<?=$type?>"><?=$msg?></div><?php endif; ?>
+        <?php if($msg): ?><div class="alert alert-<?=$type?>"><?=htmlspecialchars($msg)?></div><?php endif; ?>
 
         <div class="panel">
             <h3>Crea Nuova Local Certificate Authority (Root CA)</h3>
@@ -76,6 +86,7 @@ $cas = $pdo->query("SELECT * FROM cas ORDER BY created_at DESC")->fetchAll();
                         </select>
                     </div>
                 </div>
+                
                 <div class="form-grid">
                     <div class="form-group">
                         <label>Organization (O)</label>
@@ -94,6 +105,24 @@ $cas = $pdo->query("SELECT * FROM cas ORDER BY created_at DESC")->fetchAll();
                         <input type="number" name="days" value="3650" required>
                     </div>
                 </div>
+
+                <div class="form-group" style="margin: 15px 0;">
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                        <input type="checkbox" name="protect_with_password" id="protect_with_password" value="1">
+                        <strong>Proteggi la chiave privata di questa CA con una password</strong>
+                    </label>
+                </div>
+
+                <div id="password_secure_block" style="display: none; background: #f8fafc; padding: 15px; border-radius: 6px; border: 1px solid #e2e8f0; margin-bottom: 20px;">
+                    <div class="form-group" style="margin: 0;">
+                        <label for="ca_password" style="color: #0f172a; font-weight: bold;">Password della CA *</label>
+                        <input type="password" name="ca_password" id="ca_password" placeholder="Inserisci una passphrase robusta">
+                        <small style="color: #64748b; display: block; margin-top: 5px;">
+                            Nota: Questa password ti verrà richiesta ogni volta che dovrai rilasciare un certificato usando questa CA.
+                        </small>
+                    </div>
+                </div>
+
                 <button type="submit" name="create_ca" class="btn">Genera Root CA</button>
             </form>
         </div>
@@ -107,6 +136,7 @@ $cas = $pdo->query("SELECT * FROM cas ORDER BY created_at DESC")->fetchAll();
                         <th>Soggetto Completo</th>
                         <th>Creazione</th>
                         <th>Scadenza</th>
+                        <th>Robustezza</th>
                         <th>Stato</th>
                         <th>Azioni</th>
                     </tr>
@@ -117,9 +147,10 @@ $cas = $pdo->query("SELECT * FROM cas ORDER BY created_at DESC")->fetchAll();
                     ?>
                     <tr>
                         <td><strong><?=htmlspecialchars($ca['common_name'])?></strong></td>
-                        <td><small>/C=<?=$ca['subject_country']?>/ST=<?=$ca['subject_state']?>/L=<?=$ca['subject_locality']?>/O=<?=$ca['subject_organization']?>/OU=<?=$ca['subject_org_unit']?></small></td>
-                        <td><?=$ca['created_at']?></td>
-                        <td><?=$ca['valid_to']?></td>
+                        <td><small>/C=<?=htmlspecialchars($ca['subject_country'] ?? '')?>/ST=<?=htmlspecialchars($ca['subject_state'] ?? '')?>/L=<?=htmlspecialchars($ca['subject_locality'] ?? '')?>/O=<?=htmlspecialchars($ca['subject_organization'] ?? '')?>/OU=<?=htmlspecialchars($ca['subject_org_unit'] ?? '')?></small></td>
+                        <td><?=htmlspecialchars($ca['created_at'])?></td>
+                        <td><?=htmlspecialchars($ca['valid_to'])?></td>
+                        <td><span class="badge" style="background-color: #475569; color: #fff;"><?=intval($ca['key_bits'])?> bit</span></td>
                         <td>
                             <span class="badge <?=$isExpired ? 'badge-danger' : 'badge-success'?>">
                                 <?=$isExpired ? 'Scaduta' : 'Attiva'?>
@@ -136,5 +167,21 @@ $cas = $pdo->query("SELECT * FROM cas ORDER BY created_at DESC")->fetchAll();
             </table>
         </div>
     </div>
+
+    <script>
+    document.getElementById('protect_with_password').addEventListener('change', function() {
+        const passwordBlock = document.getElementById('password_secure_block');
+        const passwordInput = document.getElementById('ca_password');
+        
+        if (this.checked) {
+            passwordBlock.style.display = 'block';
+            passwordInput.setAttribute('required', 'required');
+        } else {
+            passwordBlock.style.display = 'none';
+            passwordInput.removeAttribute('required');
+            passwordInput.value = ''; // Pulisce il campo in caso di ripensamento
+        }
+    });
+    </script>
 </body>
 </html>

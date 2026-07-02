@@ -22,20 +22,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_cert'])) {
         'cn' => $_POST['common_name']
     ];
 
-    // Recuperiamo la lunghezza della chiave dalla form (se manca, impostiamo il default a 2048)
     $keyBits = isset($_POST['key_bits']) ? intval($_POST['key_bits']) : 2048;
+    
+    // Recuperiamo la password dal form (se vuota, sarà null)
+    $caPassword = !empty($_POST['ca_password']) ? $_POST['ca_password'] : null;
 
-    // Passiamo $keyBits come quinto argomento della funzione
-    if (SSLEngine::createCertificate($_POST['ca_id'], $dnData, $_POST['san'], intval($_POST['days']), $keyBits)) {
-        $msg = 'Certificato SSL emesso e firmato con successo!'; 
-        $type = 'success';
-    } else {
-        $msg = 'Errore durante la creazione del certificato.'; 
+    try {
+        // Passiamo $caPassword come SESTO argomento del metodo createCertificate
+        if (SSLEngine::createCertificate($_POST['ca_id'], $dnData, $_POST['san'], intval($_POST['days']), $keyBits, $caPassword)) {
+            $msg = 'Certificato SSL emesso e firmato con successo!'; 
+            $type = 'success';
+        } else {
+            $msg = 'Errore imprevisto durante la creazione del certificato.'; 
+            $type = 'danger';
+        }
+    } catch (Exception $e) {
+        // Qui viene intercettata l'eccezione lanciata da SSLEngine (inclusi i blocchi anti-timeout)
+        $msg = $e->getMessage();
         $type = 'danger';
     }
 }
 
-$cas = $pdo->query("SELECT id, common_name FROM cas")->fetchAll();
+$cas = $pdo->query("SELECT id, common_name FROM cas ORDER BY common_name ASC")->fetchAll();
 $certs = $pdo->query("SELECT c.*, ca.common_name as ca_name FROM certificates c JOIN cas ca ON c.ca_id = ca.id ORDER BY c.created_at DESC")->fetchAll();
 ?>
 <!DOCTYPE html>
@@ -48,11 +56,11 @@ $certs = $pdo->query("SELECT c.*, ca.common_name as ca_name FROM certificates c 
     <?php include 'includes/topbar.php'; ?>
 
     <div class="container">
-        <?php if($msg): ?><div class="alert alert-<?=$type?>"><?=$msg?></div><?php endif; ?>
+        <?php if($msg): ?><div class="alert alert-<?=$type?>"><?=htmlspecialchars($msg)?></div><?php endif; ?>
 
         <div class="panel">
             <h3>Emetti Nuovo Certificato SSL</h3>
-            <form method="POST">
+            <form method="POST" id="certForm">
                 <div class="form-grid">
                     <div class="form-group">
                         <label>Autorità di Firma (CA)</label>
@@ -63,25 +71,31 @@ $certs = $pdo->query("SELECT c.*, ca.common_name as ca_name FROM certificates c 
                             <?php endforeach; ?>
                         </select>
                     </div>
+                    
+                    <div class="form-group">
+                        <label for="ca_password">Password Sblocco Chiave CA</label>
+                        <input type="password" name="ca_password" id="ca_password" placeholder="Lascia vuoto se la CA non ha password" autocomplete="new-password">
+                    </div>
+
                     <div class="form-group">
                         <label for="key_bits">Lunghezza Chiave Privata (RSA):</label>
                         <select name="key_bits" id="key_bits" required>
-                            <option value="4096" selected>4096 bit (Consigliata per Root CA)</option>
+                            <option value="4096">4096 bit (Massima sicurezza)</option>
                             <option value="3072">3072 bit (Bilanciata)</option>
-                            <option value="2048">2048 bit (Standard minimo)</option>
+                            <option value="2048" selected>2048 bit (Standard consigliato per certificati)</option>
                         </select>
                     </div>
                     <div class="form-group">
                         <label>Common Name (CN)</label>
                         <input type="text" name="common_name" placeholder="freshrss.hole" required>
                     </div>
+                </div>
+                
+                <div class="form-grid">
                     <div class="form-group">
                         <label>Validità (Giorni)</label>
                         <input type="number" name="days" value="825" max="825" required>
                     </div>
-                </div>
-                
-                <div class="form-grid">
                     <div class="form-group">
                         <label>Country (C)</label>
                         <input type="text" name="country" placeholder="IT" maxlength="2" required>
@@ -125,6 +139,7 @@ $certs = $pdo->query("SELECT c.*, ca.common_name as ca_name FROM certificates c 
                         <th>Firmato Da</th>
                         <th>SAN</th>
                         <th>Scadenza</th>
+                        <th>Robustezza</th>
                         <th>Stato</th>
                         <th>Azioni</th>
                     </tr>
@@ -136,8 +151,9 @@ $certs = $pdo->query("SELECT c.*, ca.common_name as ca_name FROM certificates c 
                     <tr>
                         <td><strong><?=htmlspecialchars($cert['common_name'])?></strong></td>
                         <td><span style="color:var(--accent);"><?=htmlspecialchars($cert['ca_name'])?></span></td>
-                        <td><small><?=htmlspecialchars($cert['san_dns'])?></small></td>
-                        <td><?=$cert['valid_to']?></td>
+                        <td><small><?=htmlspecialchars($cert['san_dns'] ?? '')?></small></td>
+                        <td><?=htmlspecialchars($cert['valid_to'])?></td>
+                        <td><span class="badge" style="background-color: #475569; color: #fff;"><?=intval($cert['key_bits'])?> bit</span></td>
                         <td>
                             <span class="badge <?=$isExpired ? 'badge-danger' : 'badge-success'?>">
                                 <?=$isExpired ? 'Scaduto' : 'Attivo'?>
@@ -154,5 +170,15 @@ $certs = $pdo->query("SELECT c.*, ca.common_name as ca_name FROM certificates c 
             </table>
         </div>
     </div>
+
+    <script>
+    // Svuota il campo password dopo il submit per sicurezza e UX se si ripresentano errori
+    document.getElementById('certForm').addEventListener('submit', function() {
+        const pwdInput = document.getElementById('ca_password');
+        setTimeout(() => {
+            pwdInput.value = '';
+        }, 100);
+    });
+    </script>
 </body>
 </html>

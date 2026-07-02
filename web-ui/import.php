@@ -7,6 +7,19 @@ $msg = ''; $type = '';
 
 // Classe interna per l'importazione (sfrutta openssl_x509_parse)
 class SSLImporter {
+    
+    // Funzione helper interna per estrarre la lunghezza della chiave (bits) dal certificato
+    private static function getKeyBitsFromCert($certContent) {
+        $pubKey = openssl_pkey_get_public($certContent);
+        if ($pubKey) {
+            $details = openssl_pkey_get_details($pubKey);
+            if (isset($details['bits'])) {
+                return intval($details['bits']);
+            }
+        }
+        return 2048; // Default di fallback se non riesce a leggerla
+    }
+
     public static function importCA($certContent, $keyContent = null) {
         global $pdo;
         $parsed = openssl_x509_parse($certContent);
@@ -30,8 +43,12 @@ class SSLImporter {
         $validFrom = date('Y-m-d H:i:s', $parsed['validFrom_time_t']);
         $validTo = date('Y-m-d H:i:s', $parsed['validTo_time_t']);
 
-        $stmt = $pdo->prepare("INSERT INTO cas (common_name, subject_country, subject_state, subject_locality, subject_organization, subject_org_unit, cert_data, key_data, valid_from, valid_to) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-        $success = $stmt->execute([$cn, $c, $st, $l, $o, $ou, $certContent, $keyContent, $validFrom, $validTo]);
+        // Estrazione dinamica della lunghezza della chiave
+        $keyBits = self::getKeyBitsFromCert($certContent);
+
+        // Aggiunto key_bits nella colonna e nel binding dei parametri
+        $stmt = $pdo->prepare("INSERT INTO cas (common_name, subject_country, subject_state, subject_locality, subject_organization, subject_org_unit, cert_data, key_data, key_bits, valid_from, valid_to) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        $success = $stmt->execute([$cn, $c, $st, $l, $o, $ou, $certContent, $keyContent, $keyBits, $validFrom, $validTo]);
 
         return $success ? ["success" => true, "message" => "CA '$cn' importata con successo!"] : ["success" => false, "message" => "Errore nel salvataggio del database."];
     }
@@ -53,8 +70,12 @@ class SSLImporter {
         $validFrom = date('Y-m-d H:i:s', $parsed['validFrom_time_t']);
         $validTo = date('Y-m-d H:i:s', $parsed['validTo_time_t']);
 
-        $stmt = $pdo->prepare("INSERT INTO certificates (ca_id, common_name, subject_country, subject_state, subject_locality, subject_organization, subject_org_unit, san_dns, cert_data, key_data, valid_from, valid_to) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-        $success = $stmt->execute([$caId, $cn, $c, $st, $l, $o, $ou, $sanString, $certContent, $keyContent, $validFrom, $validTo]);
+        // Estrazione dinamica della lunghezza della chiave
+        $keyBits = self::getKeyBitsFromCert($certContent);
+
+        // Aggiunto key_bits nella colonna e nel binding dei parametri
+        $stmt = $pdo->prepare("INSERT INTO certificates (ca_id, common_name, subject_country, subject_state, subject_locality, subject_organization, subject_org_unit, san_dns, cert_data, key_data, key_bits, valid_from, valid_to) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        $success = $stmt->execute([$caId, $cn, $c, $st, $l, $o, $ou, $sanString, $certContent, $keyContent, $keyBits, $validFrom, $validTo]);
 
         return $success ? ["success" => true, "message" => "Certificato '$cn' importato con successo!"] : ["success" => false, "message" => "Errore nel salvataggio."];
     }
@@ -103,7 +124,7 @@ $cas = $pdo->query("SELECT id, common_name FROM cas ORDER BY common_name ASC")->
     <?php include 'includes/topbar.php'; ?>
     
     <div class="container">
-        <?php if($msg): ?><div class="alert alert-<?=$type?>"><?=$msg?></div><?php endif; ?>
+        <?php if($msg): ?><div class="alert alert-<?=$type?>"><?=htmlspecialchars($msg)?></div><?php endif; ?>
 
         <div class="form-grid" style="grid-template-columns: repeat(auto-fit, minmax(450px, 1fr)); gap: 20px;">
             

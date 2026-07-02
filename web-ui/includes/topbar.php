@@ -7,7 +7,7 @@
         <a href="index.php">Dashboard</a>
         <a href="manage_ca.php">Gestione CA</a>
         <a href="manage_certs.php">Gestione Certificati</a>
-        <a href="import.php">Importa</a> <a href="profile.php">Profilo</a>
+        <a href="import.php">Importa</a> 
         <a href="profile.php">Profilo</a>
         <a href="logout.php" class="logout">Logout</a>
     </div>
