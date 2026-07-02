@@ -1,0 +1,13 @@
+services:
+  aegis-ca:
+    image: ghcr.io/p1c1s/aegis-ca:latest
+    container_name: aegis-ca
+    hostname: aegis-ca
+    restart: always
+    ports:
+      - "8080:80"
+    volumes:
+          - aegis-ca_data:/data
+
+volumes:
+  aegis-ca_data:
