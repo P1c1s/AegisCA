@@ -15,10 +15,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <?php require_once 'includes/head.php'; ?>
     <title>AegisCA | Registrazione</title>
 </head>
-<body style="display:flex; align-items:center; justify-content:center; height:100vh; padding:0;">
-    <div class="panel" style="width:100%; max-width:400px;">
-        <h2>Nuovo Amministratore</h2>
-        <?php if($msg): ?><div class="alert alert-<?=$type?>"><?=$msg?></div><?php endif; ?>
+<body class="login-body">
+    <div class="panel" style="width:100%; max-width:400px; margin-bottom:0;">
+        
+        <div class="login-brand">
+            <div class="logo">
+                <img src="assets/img/aegis-ca.svg" alt="AegisCA Logo" class="logo-img">
+            </div>
+        </div>
+
+        <h2 style="text-align:center; font-size:1.3rem; margin-bottom:1.5rem;">Registrati a AegisCA</h2>
+        
+        <?php if($msg): ?>
+            <div class="alert alert-<?=$type?>"><?=$msg?></div>
+        <?php endif; ?>
+        
         <form method="POST">
             <div class="form-group" style="margin-bottom:1rem;">
                 <label>Username</label>
@@ -30,7 +41,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </div>
             <button type="submit" class="btn" style="width:100%;">Registra</button>
         </form>
-        <p style="margin-top:1rem; font-size:0.85rem; text-align:center;"><a href="login.php" style="color:var(--accent);">Torna al Login</a></p>
+        
+        <p style="margin-top:1rem; font-size:0.85rem; text-align:center;">
+            <a href="login.php" style="color:var(--accent); text-decoration:none;">Torna al Login</a>
+        </p>
     </div>
 </body>
 </html>

@@ -44,7 +44,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_cert'])) {
 }
 
 $cas = $pdo->query("SELECT id, common_name FROM cas ORDER BY common_name ASC")->fetchAll();
-$certs = $pdo->query("SELECT c.*, ca.common_name as ca_name FROM certificates c JOIN cas ca ON c.ca_id = ca.id ORDER BY c.created_at DESC")->fetchAll();
+$certs = $pdo->query("SELECT c.*, ca.common_name as ca_name FROM certificates c JOIN cas ca ON c.ca_id = ca.id ORDER BY c.common_name ASC")->fetchAll();
 ?>
 <!DOCTYPE html>
 <html lang="it">

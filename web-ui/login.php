@@ -9,6 +9,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error = 'Credenziali non valide.';
     }
 }
+
 ?>
 <!DOCTYPE html>
 <html lang="it">
@@ -18,10 +19,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <title>AegisCA | Login</title>
 </head>
 
-<body style="display:flex; align-items:center; justify-content:center; height:100vh; padding:0;">
-    <div class="panel" style="width:100%; max-width:400px;">
-        <h2>Accedi a SSL Manager</h2>
-        <?php if($error): ?><div class="alert alert-danger"><?=$error?></div><?php endif; ?>
+<body class="login-body">
+    <div class="panel" style="width:100%; max-width:400px; margin-bottom:0;">
+        
+        <div class="login-brand">
+            <div class="logo">
+                <img src="assets/img/aegis-ca.svg" alt="AegisCA Logo" class="logo-img">
+            </div>
+        </div>
+
+        <h2 style="text-align:center; font-size:1.3rem; margin-bottom:1.5rem;">Accedi a AegisCA</h2>
+        
+        <?php if($error): ?>
+            <div class="alert alert-danger"><?=$error?></div>
+        <?php endif; ?>
+        
         <form method="POST">
             <div class="form-group" style="margin-bottom:1rem;">
                 <label>Username</label>
@@ -33,7 +45,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </div>
             <button type="submit" class="btn" style="width:100%;">Accedi</button>
         </form>
-        <p style="margin-top:1rem; font-size:0.85rem; text-align:center;"><a href="register.php" style="color:var(--accent);">Registra un nuovo Admin</a></p>
+        
+        <p style="margin-top:1rem; font-size:0.85rem; text-align:center;">
+            <a href="register.php" style="color:var(--accent); text-decoration:none;">Registra un nuovo Admin</a>
+        </p>
     </div>
 </body>
 </html>
