@@ -14,7 +14,8 @@ RUN apk update && apk add --no-cache \
     curl \
     mariadb \
     mariadb-client \
-    bash
+    bash \
+    tzdata
 
 # 2. Configura MariaDB per usare /data/ come directory dei dati
 RUN mkdir -p /data /run/mysqld && \

@@ -4,6 +4,8 @@ services:
     container_name: aegis-ca
     hostname: aegis-ca
     restart: always
+    environment:
+      - TZ=Europe/Rome
     ports:
       - "8080:80"
     volumes:
