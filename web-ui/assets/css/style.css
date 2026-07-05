@@ -1,3 +1,6 @@
+/* ==========================================================================
+   1. VARIABLES & RESET (Configurazione Globale)
+   ========================================================================== */
 :root {
     --bg-dark: #0f172a;
     --panel-dark: #1e293b;
@@ -10,62 +13,378 @@
     --danger: #ef4444;
 }
 
-* { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, sans-serif; }
-body { background-color: var(--bg-dark); color: var(--text-main); padding-top: 70px; }
+* { 
+    box-sizing: border-box; 
+    margin: 0; 
+    padding: 0; 
+    font-family: 'Segoe UI', system-ui, sans-serif; 
+}
 
-/* Top Bar */
-.top-bar { position: fixed; top: 0; left: 0; right: 0; height: 64px; background-color: var(--panel-dark); border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; padding: 0 2rem; z-index: 1000; }
-/* .top-bar .logo { font-weight: 700; font-size: 0.7rem; color: var(--accent); } */
+body { 
+    background-color: var(--bg-dark); 
+    color: var(--text-main); 
+    padding-top: 70px; 
+}
+
+h2, h3 { 
+    font-weight: 600; 
+    margin-bottom: 1.2rem; 
+}
+
+
+/* ==========================================================================
+   2. LAYOUT & CONTAINERS (Struttura della Pagina)
+   ========================================================================== */
+.container { 
+    max-width: 1400px; 
+    margin: 2rem auto; 
+    padding: 0 1rem; 
+}
+
+.panel { 
+    background-color: var(--panel-dark); 
+    border: 1px solid var(--border); 
+    border-radius: 8px; 
+    padding: 1.5rem; 
+    margin-bottom: 2rem; 
+}
+
+
+/* ==========================================================================
+   3. NAVIGATION (Top Bar & Logo)
+   ========================================================================== */
+.top-bar { 
+    position: fixed; 
+    top: 0; 
+    left: 0; 
+    right: 0; 
+    z-index: 1000; 
+    height: 64px; 
+    display: flex; 
+    align-items: center; 
+    justify-content: space-between; 
+    padding: 0 2rem; 
+    background-color: var(--panel-dark); 
+    border-bottom: 1px solid var(--border); 
+}
+
 .logo {
-    display: inline-flex;  /* Forza gli elementi interni a stare affiancati */
-    align-items: center;   /* Centra verticalmente l'immagine rispetto al testo */
-    gap: 12px;             /* Spazio orizzontale fisso tra logo e scritta */
+    display: inline-flex;  
+    align-items: center;   
+    gap: 12px;             
     font-size: 24px;
     font-weight: bold;
     color: #ffffff;
-    white-space: nowrap;   /* Impedisce tassativamente al testo di andare a capo */
+    white-space: nowrap;   
 }
 
 .logo-img {
-    height: 48px;          /* Dimensione compatta per la barra */
-    width: auto;           /* Mantiene le proporzioni dell'SVG */
     display: inline-block;
     vertical-align: middle;
+    height: 46px;          
+    width: auto;           
 }
 
-.nav-links a { color: var(--text-main); text-decoration: none; margin-left: 1.5rem; transition: color 0.2s; font-size: 0.95rem; }
-.nav-links a:hover { color: var(--accent); }
-.nav-links a.logout { color: var(--danger); }
+.nav-links a { 
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--text-main); 
+    text-decoration: none; 
+    margin-left: 1.5rem; 
+    font-size: 0.95rem; 
+    transition: color 0.2s; 
+}
 
-/* Layout & Containers */
-.container { max-width: 1400px; margin: 2rem auto; padding: 0 1rem; }
-.panel { background-color: var(--panel-dark); border: 1px solid var(--border); border-radius: 8px; padding: 1.5rem; margin-bottom: 2rem; }
-h2, h3 { margin-bottom: 1.2rem; font-weight: 600; }
+.nav-links a i {
+    font-size: 1.05rem;
+}
 
-/* Form Controls */
-.form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1rem; }
-.form-group { display: flex; flex-direction: column; }
-.form-group.full-width { grid-column: 1 / -1; }
-label { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.25rem; }
-input, select, textarea { background-color: var(--bg-dark); border: 1px solid var(--border); border-radius: 4px; padding: 0.6rem; color: var(--text-main); font-size: 0.95rem; }
-input:focus, select:focus { border-color: var(--accent); outline: none; }
+.nav-links a:hover { 
+    color: var(--accent); 
+}
 
-/* Buttons */
-.btn { display: inline-flex; align-items: center; justify-content: center; background-color: var(--accent); color: white; border: none; border-radius: 4px; padding: 0.6rem 1.2rem; cursor: pointer; text-decoration: none; font-size: 0.9rem; transition: background 0.2s; }
-.btn:hover { background-color: var(--accent-hover); }
-.btn-danger { background-color: var(--danger); }
-.btn-danger:hover { background-color: #dc2626; }
-.btn-sm { padding: 0.3rem 0.6rem; font-size: 0.8rem; margin-right: 0.3rem;}
+.nav-links a.logout { 
+    color: var(--danger); 
+}
 
-/* Tables */
-table { width: 100%; border-collapse: collapse; margin-top: 1rem; text-align: left; }
-th, td { padding: 0.75rem; border-bottom: 1px solid var(--border); font-size: 1rem; }
-th { color: var(--text-muted); font-weight: 600; }
-.badge { display: inline-block; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-weight: 600; }
-.badge-success { background-color: rgba(16, 185, 129, 0.2); color: var(--success); }
-.badge-danger { background-color: rgba(239, 68, 68, 0.2); color: var(--danger); }
 
-/* Alert Box */
-.alert { padding: 0.75rem; border-radius: 4px; margin-bottom: 1rem; font-size: 0.9rem; }
-.alert-success { background-color: rgba(16, 185, 129, 0.15); border: 1px solid var(--success); color: var(--success); }
-.alert-danger { background-color: rgba(239, 68, 68, 0.15); border: 1px solid var(--danger); color: var(--danger); }
+/* ==========================================================================
+   4. FORMS & CONTROLS (Input e Campi di Testo)
+   ========================================================================== */
+.form-grid { 
+    display: grid; 
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); 
+    gap: 1rem; 
+    margin-bottom: 1rem; 
+}
+
+.form-group { 
+    display: flex; 
+    flex-direction: column; 
+}
+
+.form-group.full-width { 
+    grid-column: 1 / -1; 
+}
+
+label { 
+    font-size: 0.85rem; 
+    color: var(--text-muted); 
+    margin-bottom: 0.25rem; 
+}
+
+input, select, textarea { 
+    width: 100%;
+    padding: 0.6rem; 
+    font-size: 0.95rem; 
+    color: var(--text-main); 
+    background-color: var(--bg-dark); 
+    border: 1px solid var(--border); 
+    border-radius: 4px; 
+}
+
+input:focus, select:focus { 
+    border-color: var(--accent); 
+    outline: none; 
+}
+
+
+/* ==========================================================================
+   5. BUTTONS (Pulsanti e Interazioni)
+   ========================================================================== */
+.btn { 
+    display: inline-flex; 
+    align-items: center; 
+    justify-content: center; 
+    padding: 0.6rem 1.2rem; 
+    font-size: 0.9rem; 
+    color: white; 
+    text-decoration: none; 
+    background-color: var(--accent); 
+    border: none; 
+    border-radius: 4px; 
+    cursor: pointer; 
+    transition: background 0.2s; 
+}
+
+.btn:hover { 
+    background-color: var(--accent-hover); 
+}
+
+.btn-danger { 
+    background-color: var(--danger); 
+}
+
+.btn-danger:hover { 
+    background-color: #dc2626; 
+}
+
+.btn-sm { 
+    padding: 0.3rem 0.6rem; 
+    font-size: 0.8rem; 
+    margin-right: 0.3rem;
+}
+
+
+/* ==========================================================================
+   6. TABLES & DATA (Visualizzazione Dati)
+   ========================================================================== */
+table { 
+    width: 100%; 
+    border-collapse: collapse; 
+    margin-top: 1rem; 
+    text-align: left; 
+}
+
+th, td { 
+    padding: 0.75rem; 
+    font-size: 1rem; 
+    border-bottom: 1px solid var(--border); 
+}
+
+th { 
+    color: var(--text-muted); 
+    font-weight: 600; 
+}
+
+
+/* ==========================================================================
+   7. COMPONENTS (Badge e Alert Box)
+   ========================================================================== */
+/* Badges */
+.badge { 
+    display: inline-block; 
+    padding: 0.2rem 0.5rem; 
+    font-size: 0.75rem; 
+    font-weight: 600; 
+    border-radius: 4px; 
+}
+
+.badge-success { 
+    color: var(--success); 
+    background-color: rgba(16, 185, 129, 0.2); 
+}
+
+.badge-danger { 
+    color: var(--danger); 
+    background-color: rgba(239, 68, 68, 0.2); 
+}
+
+/* Alert Boxes */
+.alert { 
+    padding: 0.75rem; 
+    font-size: 0.9rem; 
+    margin-bottom: 1rem; 
+    border-radius: 4px; 
+}
+
+.alert-success { 
+    color: var(--success); 
+    background-color: rgba(16, 185, 129, 0.15); 
+    border: 1px solid var(--success); 
+}
+
+.alert-danger { 
+    color: var(--danger); 
+    background-color: rgba(239, 68, 68, 0.15); 
+    border: 1px solid var(--danger); 
+}
+
+
+/* ==========================================================================
+   8. PAGES SPECIFIC (Schermata di Login / Registrazione)
+   ========================================================================== */
+.login-body {
+    display: flex; 
+    align-items: center; 
+    justify-content: center; 
+    min-height: 100vh; 
+    padding: 1rem;
+}
+
+.login-brand {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 1.5rem;
+}
+
+.login-brand .logo {
+    font-size: 46px;
+}
+
+
+/* ==========================================================================
+   9. MEDIA QUERIES (Responsiveness / Adattamento Schermi)
+   ========================================================================== */
+
+/* 📱 TABLET (Sotto i 900px - Link disposti su riga inferiore) */
+@media (max-width: 900px) {
+    body {
+        padding-top: 140px; 
+    }
+
+    .top-bar {
+        flex-direction: column;
+        height: auto;
+        padding: 1rem;
+        gap: 0.75rem;
+        align-items: center;
+        text-align: center;
+    }
+
+    .logo {
+        font-size: 22px;
+        justify-content: center;
+    }
+
+    .logo-img {
+        height: 38px;
+    }
+
+    .nav-links {
+        display: flex;
+        flex-wrap: wrap; 
+        justify-content: center;
+        gap: 1rem;
+        width: 100%;
+    }
+
+    .nav-links a {
+        margin: 0; 
+        font-size: 0.9rem;
+        white-space: nowrap;
+    }
+
+    .container {
+        margin: 1rem auto;
+    }
+
+    .panel {
+        padding: 1rem;
+    }
+}
+
+/* 📲 SMARTPHONE (Sotto i 600px - SOLO ICONE NELLA NAVBAR) */
+@media (max-width: 600px) {
+    body {
+        /* Ridotto il padding perché nascondendo il testo la navbar occupa pochissimo spazio */
+        padding-top: 115px; 
+    }
+
+    .top-bar {
+        padding: 0.6rem;
+        gap: 0.5rem;
+    }
+
+    /* Nasconde la scritta "Aegis Certificate Authorities" lasciando solo lo scudetto */
+    .logo span {
+        display: none;
+    }
+    
+    .logo {
+        justify-content: center;
+        gap: 0;
+    }
+
+    /* Nasconde i testi dei link del menu */
+    .nav-links a span {
+        display: none;
+    }
+
+    .nav-links {
+        gap: 1.2rem; /* Aumenta lo spazio tra le icone per renderle facili da tappare col dito */
+    }
+
+    .nav-links a i {
+        font-size: 1.3rem; /* Ingrandisce leggermente le icone per compensare la mancanza del testo */
+    }
+
+    .form-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .btn:not(.btn-sm) {
+        width: 100%;
+        text-align: center;
+    }
+
+    .login-brand .logo {
+        font-size: 32px; 
+    }
+
+    .panel {
+        padding: 1rem;
+        overflow-x: auto; 
+    }
+    
+    table {
+        margin-top: 0;
+        min-width: 600px; 
+    }
+
+    th, td {
+        padding: 0.5rem;
+        font-size: 0.85rem;
+    }
+}
