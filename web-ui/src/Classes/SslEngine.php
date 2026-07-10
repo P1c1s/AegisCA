@@ -1,16 +1,16 @@
 <?php
-require_once 'config.php';
+// src/Classes/SslEngine.php
 
-class SSLEngine {
+class SslEngine {
     
     private static function parseDN($c, $st, $l, $o, $ou, $cn) {
         return [
-            "countryName" => strtoupper(substr(trim($c), 0, 2)),
-            "stateOrProvinceName" => trim($st),
-            "localityName" => trim($l),
-            "organizationName" => trim($o),
-            "organizationalUnitName" => trim($ou),
-            "commonName" => trim($cn)
+            "countryName" => strtoupper(substr(trim($c ?? ''), 0, 2)),
+            "stateOrProvinceName" => trim($st ?? ''),
+            "localityName" => trim($l ?? ''),
+            "organizationName" => trim($o ?? ''),
+            "organizationalUnitName" => trim($ou ?? ''),
+            "commonName" => trim($cn ?? '')
         ];
     }
 
@@ -88,7 +88,6 @@ class SSLEngine {
             throw new Exception("Errore: Un certificato con il Common Name '{$dn['commonName']}' esiste già nel sistema.");
         }
         
-        // FISSARE FATAL ERROR: Aggiunto il carattere '$' prima di caId
         $stmt = $pdo->prepare("SELECT * FROM cas WHERE id = ?");
         $stmt->execute([$caId]);
         $ca = $stmt->fetch();
@@ -96,7 +95,6 @@ class SSLEngine {
 
         $caCert = $ca['cert_data'];
         
-        // --- BLOCCO DI CONTROLLO PREVENTIVO ANTI-TIMEOUT INTERATTIVO ---
         $isKeyEncrypted = (strpos($ca['key_data'], 'ENCRYPTED') !== false);
         if ($isKeyEncrypted && empty($caPassword)) {
             throw new Exception("Errore: La chiave privata di questa CA è protetta da password. Inserisci la password di sblocco per procedere.");
@@ -105,11 +103,9 @@ class SSLEngine {
         $caKey = openssl_pkey_get_private($ca['key_data'], $caPassword);
         if ($caKey === false) {
             $sslError = openssl_error_string();
-            
             if (strpos($sslError, 'bad decrypt') !== false || strpos($sslError, 'wrong passphrase') !== false) {
                 throw new Exception("Errore: La password inserita per sbloccare la CA è errata.");
             }
-            
             throw new Exception("Impossibile caricare o sbloccare la chiave privata della CA. Errore OpenSSL: " . $sslError);
         }
 
@@ -124,64 +120,67 @@ class SSLEngine {
         
         openssl_pkey_export($privKey, $pkeyOut);
 
-        // Configurazione delle estensioni SAN
         $configArgs = ['digest_alg' => 'sha256'];
-        if (!empty($sanString)) {
-            $sans = array_map('trim', explode(',', $sanString));
-            $sansFormatted = [];
-            foreach ($sans as $san) {
-                if (filter_var($san, FILTER_VALIDATE_IP)) {
-                    $sansFormatted[] = "IP:$san";
-                } else {
-                    $sansFormatted[] = "DNS:$san";
+        $tmpConfPath = null;
+
+        try {
+            if (!empty($sanString)) {
+                $sans = array_map('trim', explode(',', $sanString));
+                $sansFormatted = [];
+                foreach ($sans as $san) {
+                    if (filter_var($san, FILTER_VALIDATE_IP)) {
+                        $sansFormatted[] = "IP:$san";
+                    } else {
+                        $sansFormatted[] = "DNS:$san";
+                    }
                 }
+                
+                $tmpConfPath = tempnam(sys_get_temp_dir(), 'ssl_cfg_');
+                $confContent = "[req]\n"
+                             . "distinguished_name = req_distinguished_name\n"
+                             . "req_extensions = v3_req\n\n"
+                             . "[req_distinguished_name]\n"
+                             . "countryName = Country Name (2 letter code)\n"
+                             . "commonName = Common Name (e.g. server FQDN)\n\n"
+                             . "[v3_req]\n"
+                             . "basicConstraints = CA:FALSE\n"
+                             . "keyUsage = digitalSignature, keyEncipherment\n"
+                             . "subjectAltName = " . implode(',', $sansFormatted) . "\n";
+                file_put_contents($tmpConfPath, $confContent);
+                
+                $configArgs['config'] = $tmpConfPath;
+                $configArgs['req_extensions'] = 'v3_req';
+                $configArgs['x509_extensions'] = 'v3_req';
             }
-            
-            $tmpConfPath = tempnam(sys_get_temp_dir(), 'ssl_cfg_');
-            $confContent = "[req]\n"
-                         . "distinguished_name = req_distinguished_name\n"
-                         . "req_extensions = v3_req\n\n"
-                         . "[req_distinguished_name]\n"
-                         . "countryName = Country Name (2 letter code)\n"
-                         . "commonName = Common Name (e.g. server FQDN)\n\n"
-                         . "[v3_req]\n"
-                         . "basicConstraints = CA:FALSE\n"
-                         . "keyUsage = digitalSignature, keyEncipherment\n"
-                         . "subjectAltName = " . implode(',', $sansFormatted) . "\n";
-            file_put_contents($tmpConfPath, $confContent);
-            
-            $configArgs['config'] = $tmpConfPath;
-            $configArgs['req_extensions'] = 'v3_req';
-            $configArgs['x509_extensions'] = 'v3_req';
+
+            $csr = openssl_csr_new($dn, $privKey, $configArgs);
+            if ($csr === false) {
+                throw new Exception("Errore nella creazione della CSR: " . openssl_error_string());
+            }
+
+            $x509 = openssl_csr_sign($csr, $caCert, $caKey, $days, $configArgs);
+            if ($x509 === false) {
+                throw new Exception("Errore nella firma del certificato: " . openssl_error_string());
+            }
+
+            openssl_x509_export($x509, $certOut);
+
+            $parsed = openssl_x509_parse($x509);
+            $validFrom = date('Y-m-d H:i:s', $parsed['validFrom_time_t']);
+            $validTo = date('Y-m-d H:i:s', $parsed['validTo_time_t']);
+
+            if (PHP_VERSION_ID < 80000 && is_resource($caKey)) {
+                openssl_free_key($caKey);
+            }
+
+            $stmt = $pdo->prepare("INSERT INTO certificates (ca_id, common_name, subject_country, subject_state, subject_locality, subject_organization, subject_org_unit, san_dns, cert_data, key_data, key_bits, valid_from, valid_to) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+            return $stmt->execute([$caId, $dn['commonName'], $dn['countryName'], $dn['stateOrProvinceName'], $dn['localityName'], $dn['organizationName'], $dn['organizationalUnitName'], $sanString, $certOut, $pkeyOut, $keyBits, $validFrom, $validTo]);
+
+        } finally {
+            // Garanzia assoluta di eliminazione del file di configurazione provvisorio
+            if ($tmpConfPath && file_exists($tmpConfPath)) {
+                unlink($tmpConfPath);
+            }
         }
-
-        $csr = openssl_csr_new($dn, $privKey, $configArgs);
-        if ($csr === false) {
-            if (isset($tmpConfPath) && file_exists($tmpConfPath)) { unlink($tmpConfPath); }
-            throw new Exception("Errore nella creazione della CSR: " . openssl_error_string());
-        }
-
-        $x509 = openssl_csr_sign($csr, $caCert, $caKey, $days, $configArgs);
-        if ($x509 === false) {
-            if (isset($tmpConfPath) && file_exists($tmpConfPath)) { unlink($tmpConfPath); }
-            throw new Exception("Errore nella firma del certificato: " . openssl_error_string());
-        }
-
-        openssl_x509_export($x509, $certOut);
-
-        if (isset($tmpConfPath) && file_exists($tmpConfPath)) {
-            unlink($tmpConfPath);
-        }
-
-        $parsed = openssl_x509_parse($x509);
-        $validFrom = date('Y-m-d H:i:s', $parsed['validFrom_time_t']);
-        $validTo = date('Y-m-d H:i:s', $parsed['validTo_time_t']);
-
-        if (PHP_VERSION_ID < 80000 && is_resource($caKey)) {
-            openssl_free_key($caKey);
-        }
-
-        $stmt = $pdo->prepare("INSERT INTO certificates (ca_id, common_name, subject_country, subject_state, subject_locality, subject_organization, subject_org_unit, san_dns, cert_data, key_data, key_bits, valid_from, valid_to) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-        return $stmt->execute([$caId, $dn['commonName'], $dn['countryName'], $dn['stateOrProvinceName'], $dn['localityName'], $dn['organizationName'], $dn['organizationalUnitName'], $sanString, $certOut, $pkeyOut, $keyBits, $validFrom, $validTo]);
     }
 }

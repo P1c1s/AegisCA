@@ -1,25 +1,25 @@
 <?php
-require_once 'auth.php';
+// src/Pages/login.php
+// Nota: Auth, $pdo, e head.php sono già stati caricati dal PageController.
+
 $error = '';
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (Auth::login($_POST['username'], $_POST['password'])) {
-        header('Location: index.php');
+    // Raccogliamo e sanifichiamo velocemente i dati di input
+    $username = trim($_POST['username'] ?? '');
+    $password = $_POST['password'] ?? '';
+
+    if (Auth::login($username, $password)) {
+        // Login riuscito: reindirizziamo alla dashboard tramite il Front Controller
+        header('Location: index.php?page=dashboard');
         exit;
     } else {
         $error = 'Credenziali non valide.';
     }
 }
-
 ?>
-<!DOCTYPE html>
-<html lang="it">
 
-<head>
-    <?php require_once 'includes/head.php'; ?>
-    <title>AegisCA | Login</title>
-</head>
-
-<body class="login-body">
+<div class="login-body-wrapper" style="display: flex; justify-content: center; align-items: center; min-height: 80vh;">
     <div class="panel" style="width:100%; max-width:400px; margin-bottom:0;">
         
         <div class="login-brand">
@@ -30,8 +30,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         <h2 style="text-align:center; font-size:1.3rem; margin-bottom:1.5rem;">Accedi a AegisCA</h2>
         
-        <?php if($error): ?>
-            <div class="alert alert-danger"><?=$error?></div>
+        <?php if ($error): ?>
+            <div class="alert alert-danger"><?= htmlspecialchars($error) ?></div>
         <?php endif; ?>
         
         <form method="POST">
@@ -47,8 +47,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </form>
         
         <p style="margin-top:1rem; font-size:0.85rem; text-align:center;">
-            <a href="register.php" style="color:var(--accent); text-decoration:none;">Registra un nuovo Admin</a>
+            <a href="index.php?page=register" style="color:var(--accent); text-decoration:none;">Registra un nuovo Admin</a>
         </p>
     </div>
-</body>
-</html>
+</div>

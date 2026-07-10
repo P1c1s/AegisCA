@@ -263,6 +263,11 @@ th {
     padding: 1rem;
 }
 
+/* Nuova regola ad-hoc per supportare l'architettura a controller */
+.login-body-wrapper {
+    margin-top: -70px; /* Annulla il padding superiore del body globale */
+}
+
 .login-brand {
     display: flex;
     justify-content: center;
@@ -278,7 +283,7 @@ th {
    9. MEDIA QUERIES (Responsiveness / Adattamento Schermi)
    ========================================================================== */
 
-/* 📱 TABLET (Sotto i 900px - Link disposti su riga inferiore) */
+/* 📱 TABLET */
 @media (max-width: 900px) {
     body {
         padding-top: 140px; 
@@ -325,10 +330,9 @@ th {
     }
 }
 
-/* 📲 SMARTPHONE (Sotto i 600px - SOLO ICONE NELLA NAVBAR) */
+/* 📲 SMARTPHONE */
 @media (max-width: 600px) {
     body {
-        /* Ridotto il padding perché nascondendo il testo la navbar occupa pochissimo spazio */
         padding-top: 115px; 
     }
 
@@ -337,7 +341,6 @@ th {
         gap: 0.5rem;
     }
 
-    /* Nasconde la scritta "Aegis Certificate Authorities" lasciando solo lo scudetto */
     .logo span {
         display: none;
     }
@@ -347,17 +350,16 @@ th {
         gap: 0;
     }
 
-    /* Nasconde i testi dei link del menu */
     .nav-links a span {
         display: none;
     }
 
     .nav-links {
-        gap: 1.2rem; /* Aumenta lo spazio tra le icone per renderle facili da tappare col dito */
+        gap: 1.2rem; 
     }
 
     .nav-links a i {
-        font-size: 1.3rem; /* Ingrandisce leggermente le icone per compensare la mancanza del testo */
+        font-size: 1.3rem; 
     }
 
     .form-grid {

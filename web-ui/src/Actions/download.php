@@ -1,9 +1,9 @@
 <?php
-require_once 'auth.php';
-Auth::check();
-global $pdo;
+// src/Actions/download.php
+// Nota: Auth e la connessione globale $pdo sono già pronti grazie al PageController.
 
 if (!isset($_GET['type']) || !isset($_GET['id'])) {
+    http_response_code(400);
     die("Parametri mancanti.");
 }
 
@@ -14,7 +14,10 @@ if ($type === 'ca_cert' || $type === 'ca_key') {
     $stmt = $pdo->prepare("SELECT common_name, cert_data, key_data FROM cas WHERE id = ?");
     $stmt->execute([$id]);
     $res = $stmt->fetch();
-    if (!$res) die("CA non trovata.");
+    if (!$res) {
+        http_response_code(404);
+        die("CA non trovata.");
+    }
 
     $filename = str_replace(' ', '_', $res['common_name']);
     if ($type === 'ca_cert') {
@@ -30,7 +33,10 @@ if ($type === 'ca_cert' || $type === 'ca_key') {
     $stmt = $pdo->prepare("SELECT common_name, cert_data, key_data FROM certificates WHERE id = ?");
     $stmt->execute([$id]);
     $res = $stmt->fetch();
-    if (!$res) die("Certificato non trovato.");
+    if (!$res) {
+        http_response_code(404);
+        die("Certificato non trovato.");
+    }
 
     $filename = str_replace(' ', '_', $res['common_name']);
     if ($type === 'cert_cert') {

@@ -1,9 +1,9 @@
 <?php
-require_once 'config.php';
+// src/Classes/Auth.php
 
 class Auth {
     public static function login($username, $password) {
-        global $pdo;
+        global $pdo; // $pdo arriva dal config.php caricato nell'index
         $stmt = $pdo->prepare("SELECT * FROM users WHERE username = ?");
         $stmt->execute([$username]);
         $user = $stmt->fetch();
@@ -34,10 +34,8 @@ class Auth {
         return $stmt->execute([$hashedPassword, $userId]);
     }
 
-    public static function check() {
-        if (!isset($_SESSION['user_id'])) {
-            header('Location: login.php');
-            exit;
-        }
+    // MODIFICATO: Ora restituisce un booleano invece di fare il redirect fisso
+    public static function isLoggedIn() {
+        return isset($_SESSION['user_id']);
     }
 }

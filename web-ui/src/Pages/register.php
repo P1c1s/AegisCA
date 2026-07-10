@@ -1,21 +1,30 @@
 <?php
-require_once 'auth.php';
-$msg = ''; $type = '';
+// src/Pages/register.php
+// Nota: Auth, $pdo e head.php sono già stati gestiti dal PageController.
+
+$msg = ''; 
+$type = '';
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (Auth::register($_POST['username'], $_POST['password'])) {
-        $msg = 'Registrazione completata. Puoi effettuare il login.'; $type = 'success';
+    $username = trim($_POST['username'] ?? '');
+    $password = $_POST['password'] ?? '';
+
+    if (!empty($username) && !empty($password)) {
+        if (Auth::register($username, $password)) {
+            $msg = 'Registrazione completata. Puoi effettuare il login.'; 
+            $type = 'success';
+        } else {
+            $msg = 'Errore durante la registrazione (Username già esistente).'; 
+            $type = 'danger';
+        }
     } else {
-        $msg = 'Errore durante la registrazione (Username già esistente).'; $type = 'danger';
+        $msg = 'Tutti i campi sono obbligatori.';
+        $type = 'danger';
     }
 }
 ?>
-<!DOCTYPE html>
-<html lang="it">
-<head>
-    <?php require_once 'includes/head.php'; ?>
-    <title>AegisCA | Registrazione</title>
-</head>
-<body class="login-body">
+
+<div class="login-body-wrapper" style="display: flex; justify-content: center; align-items: center; min-height: 80vh;">
     <div class="panel" style="width:100%; max-width:400px; margin-bottom:0;">
         
         <div class="login-brand">
@@ -26,8 +35,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         <h2 style="text-align:center; font-size:1.3rem; margin-bottom:1.5rem;">Registrati a AegisCA</h2>
         
-        <?php if($msg): ?>
-            <div class="alert alert-<?=$type?>"><?=$msg?></div>
+        <?php if ($msg): ?>
+            <div class="alert alert-<?= $type ?>"><?= htmlspecialchars($msg) ?></div>
         <?php endif; ?>
         
         <form method="POST">
@@ -43,8 +52,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </form>
         
         <p style="margin-top:1rem; font-size:0.85rem; text-align:center;">
-            <a href="login.php" style="color:var(--accent); text-decoration:none;">Torna al Login</a>
+            <a href="index.php?page=login" style="color:var(--accent); text-decoration:none;">Torna al Login</a>
         </p>
     </div>
-</body>
-</html>
+</div>
