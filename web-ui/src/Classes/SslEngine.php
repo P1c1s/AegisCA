@@ -15,16 +15,53 @@ class SslEngine {
     }
 
     /**
-     * Crea una nuova Certificate Authority (Root CA)
+     * Helper privato per generare una coppia di chiavi (RSA o ECC con curve variabili)
      */
-    public static function createCA($dnData, $days = 3650, $keyBits = 4096, $caPassword = null) {
-        global $pdo;
-        
-        $keyBits = intval($keyBits);
-        if (!in_array($keyBits, [2048, 3072, 4096])) {
-            $keyBits = 4096; 
+    private static function generateKey($keyType, $keySpec) {
+        if (strtolower($keyType) === 'ecc') {
+            // Validiamo la curva passata dal form, altrimenti usiamo prime256v1 come fallback
+            $allowedCurves = ['prime256v1', 'secp384r1', 'secp521r1'];
+            $curve = in_array($keySpec, $allowedCurves) ? $keySpec : 'prime256v1';
+            
+            $config = [
+                "private_key_type" => OPENSSL_KEYTYPE_EC,
+                "curve_name" => $curve
+            ];
+            
+            // Definiamo i bit equivalenti da salvare nella colonna key_bits del DB
+            $bitsValue = 256;
+            if ($curve === 'secp384r1') $bitsValue = 384;
+            if ($curve === 'secp521r1') $bitsValue = 521;
+        } else {
+            $keyBits = intval($keySpec);
+            if (!in_array($keyBits, [2048, 3072, 4096])) {
+                $keyBits = 2048;
+            }
+            $config = [
+                "private_key_type" => OPENSSL_KEYTYPE_RSA,
+                "private_key_bits" => $keyBits,
+            ];
+            $bitsValue = $keyBits;
         }
 
+        $privKey = openssl_pkey_new($config);
+        if ($privKey === false) {
+            throw new Exception("Errore OpenSSL nella generazione della chiave (" . strtoupper($keyType) . "): " . openssl_error_string());
+        }
+
+        return [
+            'resource' => $privKey,
+            'bits' => $bitsValue
+        ];
+    }
+
+    /**
+     * Crea una nuova Certificate Authority (Root CA) - Supporta RSA ed ECC (Curve Variabili)
+     */
+    public static function createCA($dnData, $days = 3650, $keyType = 'rsa', $keySpec = 4096, $caPassword = null) {
+        global $pdo;
+        
+        $keyType = strtolower($keyType) === 'ecc' ? 'ecc' : 'rsa';
         $dn = self::parseDN($dnData['c'], $dnData['st'], $dnData['l'], $dnData['o'], $dnData['ou'], $dnData['cn']);
         
         $checkStmt = $pdo->prepare("SELECT COUNT(*) FROM cas WHERE common_name = ?");
@@ -33,14 +70,10 @@ class SslEngine {
             throw new Exception("Errore: Una Certificate Authority con il Common Name '{$dn['commonName']}' esiste già.");
         }
 
-        $privKey = openssl_pkey_new([
-            "private_key_bits" => $keyBits,
-            "private_key_type" => OPENSSL_KEYTYPE_RSA,
-        ]);
-        
-        if ($privKey === false) {
-            throw new Exception("Errore OpenSSL nella generazione della chiave privata della CA: " . openssl_error_string());
-        }
+        // Generazione dinamica della chiave passando il tipo e la specifica (bit o curva)
+        $keyPair = self::generateKey($keyType, $keySpec);
+        $privKey = $keyPair['resource'];
+        $actualBits = $keyPair['bits'];
 
         $pkeyOut = '';
         if (!empty($caPassword)) {
@@ -65,21 +98,29 @@ class SslEngine {
         $validFrom = date('Y-m-d H:i:s', $parsed['validFrom_time_t']);
         $validTo = date('Y-m-d H:i:s', $parsed['validTo_time_t']);
 
-        $stmt = $pdo->prepare("INSERT INTO cas (common_name, subject_country, subject_state, subject_locality, subject_organization, subject_org_unit, cert_data, key_data, key_bits, valid_from, valid_to) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-        return $stmt->execute([$dn['commonName'], $dn['countryName'], $dn['stateOrProvinceName'], $dn['localityName'], $dn['organizationName'], $dn['organizationalUnitName'], $certOut, $pkeyOut, $keyBits, $validFrom, $validTo]);
+        // Query mappata sul database aegis_ca con la colonna key_type
+        $stmt = $pdo->prepare("
+            INSERT INTO cas (
+                common_name, subject_country, subject_state, subject_locality, 
+                subject_organization, subject_org_unit, cert_data, key_data, 
+                key_type, key_bits, valid_from, valid_to
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ");
+        
+        return $stmt->execute([
+            $dn['commonName'], $dn['countryName'], $dn['stateOrProvinceName'], $dn['localityName'], 
+            $dn['organizationName'], $dn['organizationalUnitName'], $certOut, $pkeyOut, 
+            $keyType, $actualBits, $validFrom, $validTo
+        ]);
     }
 
     /**
-     * Rilascia e firma un certificato SSL foglia usando una CA del sistema
+     * Rilascia e firma un certificato SSL foglia - Supporta RSA ed ECC (Curve Variabili)
      */
-    public static function createCertificate($caId, $dnData, $sanString, $days = 825, $keyBits = 2048, $caPassword = null) {
+    public static function createCertificate($caId, $dnData, $sanString, $days = 825, $keyType = 'rsa', $keySpec = 2048, $caPassword = null) {
         global $pdo;
         
-        $keyBits = intval($keyBits);
-        if (!in_array($keyBits, [2048, 3072, 4096])) {
-            $keyBits = 2048; 
-        }
-        
+        $keyType = strtolower($keyType) === 'ecc' ? 'ecc' : 'rsa';
         $dn = self::parseDN($dnData['c'], $dnData['st'], $dnData['l'], $dnData['o'], $dnData['ou'], $dnData['cn']);
 
         $checkStmt = $pdo->prepare("SELECT COUNT(*) FROM certificates WHERE common_name = ?");
@@ -89,7 +130,7 @@ class SslEngine {
         }
         
         $stmt = $pdo->prepare("SELECT * FROM cas WHERE id = ?");
-        $stmt->execute([$caId]);
+        $stmt->execute([$caId]); // Fix: Aggiunto il simbolo $ mancante a caId
         $ca = $stmt->fetch();
         if (!$ca) return false;
 
@@ -109,14 +150,10 @@ class SslEngine {
             throw new Exception("Impossibile caricare o sbloccare la chiave privata della CA. Errore OpenSSL: " . $sslError);
         }
 
-        $privKey = openssl_pkey_new([
-            "private_key_bits" => $keyBits,
-            "private_key_type" => OPENSSL_KEYTYPE_RSA,
-        ]);
-        
-        if ($privKey === false) {
-            throw new Exception("Errore OpenSSL nella generazione della chiave del certificato: " . openssl_error_string());
-        }
+        // Generazione dinamica della chiave foglia
+        $keyPair = self::generateKey($keyType, $keySpec);
+        $privKey = $keyPair['resource'];
+        $actualBits = $keyPair['bits'];
         
         openssl_pkey_export($privKey, $pkeyOut);
 
@@ -124,6 +161,18 @@ class SslEngine {
         $tmpConfPath = null;
 
         try {
+            // Generazione del file di configurazione temporaneo per i SAN
+            $tmpConfPath = tempnam(sys_get_temp_dir(), 'ssl_cfg_');
+            $confContent = "[req]\n"
+                         . "distinguished_name = req_distinguished_name\n"
+                         . "req_extensions = v3_req\n\n"
+                         . "[req_distinguished_name]\n"
+                         . "countryName = Country Name (2 letter code)\n"
+                         . "commonName = Common Name (e.g. server FQDN)\n\n"
+                         . "[v3_req]\n"
+                         . "basicConstraints = CA:FALSE\n"
+                         . "keyUsage = digitalSignature, keyEncipherment\n";
+
             if (!empty($sanString)) {
                 $sans = array_map('trim', explode(',', $sanString));
                 $sansFormatted = [];
@@ -134,24 +183,14 @@ class SslEngine {
                         $sansFormatted[] = "DNS:$san";
                     }
                 }
-                
-                $tmpConfPath = tempnam(sys_get_temp_dir(), 'ssl_cfg_');
-                $confContent = "[req]\n"
-                             . "distinguished_name = req_distinguished_name\n"
-                             . "req_extensions = v3_req\n\n"
-                             . "[req_distinguished_name]\n"
-                             . "countryName = Country Name (2 letter code)\n"
-                             . "commonName = Common Name (e.g. server FQDN)\n\n"
-                             . "[v3_req]\n"
-                             . "basicConstraints = CA:FALSE\n"
-                             . "keyUsage = digitalSignature, keyEncipherment\n"
-                             . "subjectAltName = " . implode(',', $sansFormatted) . "\n";
-                file_put_contents($tmpConfPath, $confContent);
-                
-                $configArgs['config'] = $tmpConfPath;
-                $configArgs['req_extensions'] = 'v3_req';
-                $configArgs['x509_extensions'] = 'v3_req';
+                $confContent .= "subjectAltName = " . implode(',', $sansFormatted) . "\n";
             }
+            
+            file_put_contents($tmpConfPath, $confContent);
+            
+            $configArgs['config'] = $tmpConfPath;
+            $configArgs['req_extensions'] = 'v3_req';
+            $configArgs['x509_extensions'] = 'v3_req';
 
             $csr = openssl_csr_new($dn, $privKey, $configArgs);
             if ($csr === false) {
@@ -173,11 +212,22 @@ class SslEngine {
                 openssl_free_key($caKey);
             }
 
-            $stmt = $pdo->prepare("INSERT INTO certificates (ca_id, common_name, subject_country, subject_state, subject_locality, subject_organization, subject_org_unit, san_dns, cert_data, key_data, key_bits, valid_from, valid_to) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-            return $stmt->execute([$caId, $dn['commonName'], $dn['countryName'], $dn['stateOrProvinceName'], $dn['localityName'], $dn['organizationName'], $dn['organizationalUnitName'], $sanString, $certOut, $pkeyOut, $keyBits, $validFrom, $validTo]);
+            // Inserimento finale nel DB con tipologia dell'algoritmo e bit reali della curva
+            $stmt = $pdo->prepare("
+                INSERT INTO certificates (
+                    ca_id, common_name, subject_country, subject_state, subject_locality, 
+                    subject_organization, subject_org_unit, san_dns, cert_data, key_data, 
+                    key_type, key_bits, valid_from, valid_to
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ");
+            
+            return $stmt->execute([
+                $caId, $dn['commonName'], $dn['countryName'], $dn['stateOrProvinceName'], $dn['localityName'], 
+                $dn['organizationName'], $dn['organizationalUnitName'], $sanString, $certOut, $pkeyOut, 
+                $keyType, $actualBits, $validFrom, $validTo
+            ]);
 
         } finally {
-            // Garanzia assoluta di eliminazione del file di configurazione provvisorio
             if ($tmpConfPath && file_exists($tmpConfPath)) {
                 unlink($tmpConfPath);
             }

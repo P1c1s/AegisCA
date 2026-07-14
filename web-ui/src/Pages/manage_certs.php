@@ -29,12 +29,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_cert'])) {
         'cn' => $_POST['common_name'] ?? ''
     ];
 
-    $keyBits = isset($_POST['key_bits']) ? intval($_POST['key_bits']) : 2048;
+    // Recupero dinamico del tipo di algoritmo
+    $keyType = isset($_POST['key_type']) ? strtolower($_POST['key_type']) : 'rsa';
+    
+    // Assegnazione della specifica (Curva per ECC o Bit per RSA)
+    $keySpec = ($keyType === 'ecc') ? ($_POST['key_curve_ecc'] ?? 'prime256v1') : ($_POST['key_bits_rsa'] ?? 2048);
     $caPassword = !empty($_POST['ca_password']) ? $_POST['ca_password'] : null;
 
     try {
-        // Utilizziamo SslEngine secondo lo standard rinominato
-        if (SslEngine::createCertificate($_POST['ca_id'], $dnData, $_POST['san'] ?? '', intval($_POST['days']), $keyBits, $caPassword)) {
+        // Passiamo $keyType e $keySpec al metodo aggiornato di SslEngine
+        if (SslEngine::createCertificate($_POST['ca_id'], $dnData, $_POST['san'] ?? '', intval($_POST['days']), $keyType, $keySpec, $caPassword)) {
             $msg = 'Certificato SSL emesso e firmato con successo!'; 
             $type = 'success';
         } else {
@@ -76,13 +80,13 @@ $certs = $pdo->query("SELECT c.*, ca.common_name as ca_name FROM certificates c 
                 </div>
 
                 <div class="form-group">
-                    <label for="key_bits">Lunghezza Chiave Privata (RSA):</label>
-                    <select name="key_bits" id="key_bits" required>
-                        <option value="4096">4096 bit (Massima sicurezza)</option>
-                        <option value="3072">3072 bit (Bilanciata)</option>
-                        <option value="2048" selected>2048 bit (Standard consigliato per certificati)</option>
+                    <label for="key_type">Algoritmo Chiave</label>
+                    <select name="key_type" id="key_type" required>
+                        <option value="rsa" selected>RSA (Consigliato per server legacy)</option>
+                        <option value="ecc">ECC / ECDSA (Ottimizzato per HomeLab/Veloce)</option>
                     </select>
                 </div>
+
                 <div class="form-group">
                     <label>Common Name (CN)</label>
                     <input type="text" name="common_name" placeholder="freshrss.hole" required>
@@ -90,6 +94,24 @@ $certs = $pdo->query("SELECT c.*, ca.common_name as ca_name FROM certificates c 
             </div>
             
             <div class="form-grid">
+                <div class="form-group" id="rsa_options_wrapper">
+                    <label for="key_bits_rsa">Lunghezza Chiave (RSA):</label>
+                    <select name="key_bits_rsa" id="key_bits_rsa">
+                        <option value="4096">4096 bit (Massima sicurezza)</option>
+                        <option value="3072">3072 bit (Bilanciata)</option>
+                        <option value="2048" selected>2048 bit (Standard consigliato)</option>
+                    </select>
+                </div>
+
+                <div class="form-group" id="ecc_options_wrapper" style="display: none;">
+                    <label for="key_curve_ecc">Tipo di Curva (ECC):</label>
+                    <select name="key_curve_ecc" id="key_curve_ecc">
+                        <option value="prime256v1" selected>prime256v1 (NIST P-256 - Standard e Veloce)</option>
+                        <option value="secp384r1">secp384r1 (NIST P-384 - Alta Sicurezza)</option>
+                        <option value="secp521r1">secp521r1 (NIST P-521 - Paranoico)</option>
+                    </select>
+                </div>
+
                 <div class="form-group">
                     <label>Validità (Giorni)</label>
                     <input type="number" name="days" value="825" max="825" required>
@@ -102,13 +124,13 @@ $certs = $pdo->query("SELECT c.*, ca.common_name as ca_name FROM certificates c 
                     <label>State (ST)</label>
                     <input type="text" name="state" placeholder="Lazio" required>
                 </div>
+            </div>
+
+            <div class="form-grid">
                 <div class="form-group">
                     <label>Locality (L)</label>
                     <input type="text" name="locality" placeholder="Roma" required>
                 </div>
-            </div>
-
-            <div class="form-grid">
                 <div class="form-group">
                     <label>Organization (O)</label>
                     <input type="text" name="organization" placeholder="HomeLab" required>
@@ -137,7 +159,7 @@ $certs = $pdo->query("SELECT c.*, ca.common_name as ca_name FROM certificates c 
                     <th>Firmato Da</th>
                     <th>SAN</th>
                     <th>Scadenza</th>
-                    <th>Robustezza</th>
+                    <th>Algoritmo / Robustezza</th> 
                     <th>Stato</th>
                     <th>Azioni</th>
                 </tr>
@@ -145,13 +167,17 @@ $certs = $pdo->query("SELECT c.*, ca.common_name as ca_name FROM certificates c 
             <tbody>
                 <?php foreach($certs as $cert): 
                     $isExpired = strtotime($cert['valid_to']) < time();
+                    $algo = strtoupper($cert['key_type'] ?? 'rsa');
                 ?>
                 <tr>
                     <td><strong><?=htmlspecialchars($cert['common_name'])?></strong></td>
                     <td><span style="color:var(--accent);"><?=htmlspecialchars($cert['ca_name'])?></span></td>
                     <td><small><?=htmlspecialchars($cert['san_dns'] ?? '')?></small></td>
                     <td><?=htmlspecialchars($cert['valid_to'])?></td>
-                    <td><span class="badge" style="background-color: #475569; color: #fff;"><?=intval($cert['key_bits'])?> bit</span></td>
+                    <td>
+                        <span class="badge" style="background-color: #0284c7; color: #fff; font-weight: bold; margin-right: 5px;"><?=$algo?></span>
+                        <span class="badge" style="background-color: #475569; color: #fff;"><?=intval($cert['key_bits'])?> bit</span>
+                    </td>
                     <td>
                         <span class="badge <?=$isExpired ? 'badge-danger' : 'badge-success'?>">
                             <?=$isExpired ? 'Scaduto' : 'Attiva'?>
@@ -175,5 +201,19 @@ document.getElementById('certForm').addEventListener('submit', function() {
     setTimeout(() => {
         pwdInput.value = '';
     }, 100);
+});
+
+// Gestione condizionale del pannello RSA bits vs ECC Curves
+document.getElementById('key_type').addEventListener('change', function() {
+    const rsaWrapper = document.getElementById('rsa_options_wrapper');
+    const eccWrapper = document.getElementById('ecc_options_wrapper');
+    
+    if (this.value === 'ecc') {
+        rsaWrapper.style.display = 'none';
+        eccWrapper.style.display = 'block';
+    } else {
+        rsaWrapper.style.display = 'block';
+        eccWrapper.style.display = 'none';
+    }
 });
 </script>

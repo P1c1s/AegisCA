@@ -10,7 +10,7 @@ error_reporting(E_ALL);
 define('DB_HOST', 'localhost');
 define('DB_USER', 'lorenzo');
 define('DB_PASS', 'qss-s3E-IH9_Khz');
-define('DB_NAME', 'ssl_manager');
+define('DB_NAME', 'aegis_ca');
 
 // 3. Percorsi globali aggiornati e dinamici
 if (!defined('ROOT_PATH')) {

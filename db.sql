@@ -1,11 +1,12 @@
--- Creazione dell'utente MySQL e assegnazione dei privilegi
+-- Creazione dell'utente MySQL e assegnazione dei privilegi sul nuovo DB
 CREATE USER IF NOT EXISTS 'lorenzo'@'localhost' IDENTIFIED BY 'qss-s3E-IH9_Khz';
 
-CREATE DATABASE IF NOT EXISTS `ssl_manager` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-GRANT ALL PRIVILEGES ON `ssl_manager`.* TO 'lorenzo'@'localhost';
+-- Database rinominato in aegis_ca
+CREATE DATABASE IF NOT EXISTS `aegis_ca` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+GRANT ALL PRIVILEGES ON `aegis_ca`.* TO 'lorenzo'@'localhost';
 FLUSH PRIVILEGES;
 
-USE `ssl_manager`;
+USE `aegis_ca`;
 
 -- 1. Tabella Utenti
 CREATE TABLE IF NOT EXISTS `users` (
@@ -26,6 +27,7 @@ CREATE TABLE IF NOT EXISTS `cas` (
     `subject_org_unit` VARCHAR(255) NOT NULL,
     `cert_data` TEXT NOT NULL,
     `key_data` TEXT NOT NULL,
+    `key_type` VARCHAR(10) NOT NULL DEFAULT 'rsa',
     `key_bits` INT NOT NULL,
     `valid_from` DATETIME NOT NULL,
     `valid_to` DATETIME NOT NULL,
@@ -45,6 +47,7 @@ CREATE TABLE IF NOT EXISTS `certificates` (
     `san_dns` TEXT DEFAULT NULL,
     `cert_data` TEXT NOT NULL,
     `key_data` TEXT NOT NULL,
+    `key_type` VARCHAR(10) NOT NULL DEFAULT 'rsa',
     `key_bits` INT NOT NULL,
     `valid_from` DATETIME NOT NULL,
     `valid_to` DATETIME NOT NULL,

@@ -2,6 +2,8 @@
 // src/Actions/download.php
 // Nota: Auth e la connessione globale $pdo sono già pronti grazie al PageController.
 
+global $pdo;
+
 if (!isset($_GET['type']) || !isset($_GET['id'])) {
     http_response_code(400);
     die("Parametri mancanti.");

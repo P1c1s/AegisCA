@@ -9,7 +9,6 @@ $type = '';
 
 global $pdo;
 
-
 // Eliminazione CA
 if (isset($_GET['delete'])) {
     $stmt = $pdo->prepare("DELETE FROM cas WHERE id = ?");
@@ -30,13 +29,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_ca'])) {
         'cn' => $_POST['common_name'] ?? ''
     ];
 
-    $keyBits = isset($_POST['key_bits']) ? intval($_POST['key_bits']) : 4096;
+    // Recupero dinamico del tipo di algoritmo
+    $keyType = isset($_POST['key_type']) ? strtolower($_POST['key_type']) : 'rsa';
+    
+    // Assegnazione della specifica (Curva per ECC o Bit per RSA)
+    $keySpec = ($keyType === 'ecc') ? ($_POST['key_curve_ecc'] ?? 'prime256v1') : ($_POST['key_bits_rsa'] ?? 4096);
+    
     $encryptKey = isset($_POST['protect_with_password']);
     $caPassword = ($encryptKey && !empty($_POST['ca_password'])) ? $_POST['ca_password'] : null;
 
     try {
-        // Usiamo la classe SslEngine con la capitalizzazione corretta
-        if (SslEngine::createCA($dnData, intval($_POST['days']), $keyBits, $caPassword)) {
+        // Passiamo $keyType e $keySpec alla classe SslEngine
+        if (SslEngine::createCA($dnData, intval($_POST['days']), $keyType, $keySpec, $caPassword)) {
             $msg = 'CA Generata con Successo!'; 
             $type = 'success';
         } else {
@@ -73,12 +77,12 @@ $cas = $pdo->query("SELECT * FROM cas ORDER BY created_at DESC")->fetchAll();
                     <label>Locality (L)</label>
                     <input type="text" name="locality" placeholder="Roma" required>
                 </div>
+                
                 <div class="form-group">
-                    <label for="key_bits">Lunghezza Chiave Privata (RSA):</label>
-                    <select name="key_bits" id="key_bits" required>
-                        <option value="4096" selected>4096 bit (Consigliata per Root CA)</option>
-                        <option value="3072">3072 bit (Bilanciata)</option>
-                        <option value="2048">2048 bit (Standard minimo)</option>
+                    <label for="key_type">Algoritmo Chiave</label>
+                    <select name="key_type" id="key_type" required>
+                        <option value="rsa" selected>RSA (Standard, compatibilità globale)</option>
+                        <option value="ecc">ECC (Moderno, ultra-veloce ed efficiente)</option>
                     </select>
                 </div>
             </div>
@@ -96,6 +100,25 @@ $cas = $pdo->query("SELECT * FROM cas ORDER BY created_at DESC")->fetchAll();
                     <label>Common Name (CN)</label>
                     <input type="text" name="common_name" placeholder="Mia Root CA Local" required>
                 </div>
+
+                <div class="form-group" id="rsa_options_wrapper">
+                    <label for="key_bits_rsa">Lunghezza Chiave (RSA):</label>
+                    <select name="key_bits_rsa" id="key_bits_rsa">
+                        <option value="4096" selected>4096 bit (Consigliata per Root CA)</option>
+                        <option value="3072">3072 bit (Bilanciata)</option>
+                        <option value="2048">2048 bit (Standard minimo)</option>
+                    </select>
+                </div>
+
+                <div class="form-group" id="ecc_options_wrapper" style="display: none;">
+                    <label for="key_curve_ecc">Tipo di Curva (ECC):</label>
+                    <select name="key_curve_ecc" id="key_curve_ecc">
+                        <option value="prime256v1" selected>prime256v1 (NIST P-256 - Standard)</option>
+                        <option value="secp384r1">secp384r1 (NIST P-384 - Alta Sicurezza)</option>
+                        <option value="secp521r1">secp521r1 (NIST P-521 - Paranoico)</option>
+                    </select>
+                </div>
+                
                 <div class="form-group">
                     <label>Validità (Giorni)</label>
                     <input type="number" name="days" value="3650" required>
@@ -132,7 +155,7 @@ $cas = $pdo->query("SELECT * FROM cas ORDER BY created_at DESC")->fetchAll();
                     <th>Soggetto Completo</th>
                     <th>Creazione</th>
                     <th>Scadenza</th>
-                    <th>Robustezza</th>
+                    <th>Algoritmo / Robustezza</th>
                     <th>Stato</th>
                     <th>Azioni</th>
                 </tr>
@@ -140,13 +163,17 @@ $cas = $pdo->query("SELECT * FROM cas ORDER BY created_at DESC")->fetchAll();
             <tbody>
                 <?php foreach($cas as $ca): 
                     $isExpired = strtotime($ca['valid_to']) < time();
+                    $algo = strtoupper($ca['key_type'] ?? 'rsa');
                 ?>
                 <tr>
                     <td><strong><?=htmlspecialchars($ca['common_name'])?></strong></td>
                     <td><small>/C=<?=htmlspecialchars($ca['subject_country'] ?? '')?>/ST=<?=htmlspecialchars($ca['subject_state'] ?? '')?>/L=<?=htmlspecialchars($ca['subject_locality'] ?? '')?>/O=<?=htmlspecialchars($ca['subject_organization'] ?? '')?>/OU=<?=htmlspecialchars($ca['subject_org_unit'] ?? '')?></small></td>
                     <td><?=htmlspecialchars($ca['created_at'])?></td>
                     <td><?=htmlspecialchars($ca['valid_to'])?></td>
-                    <td><span class="badge" style="background-color: #475569; color: #fff;"><?=intval($ca['key_bits'])?> bit</span></td>
+                    <td>
+                        <span class="badge" style="background-color: #0284c7; color: #fff; font-weight: bold; margin-right: 5px;"><?=$algo?></span>
+                        <span class="badge" style="background-color: #475569; color: #fff;"><?=intval($ca['key_bits'])?> bit</span>
+                    </td>
                     <td>
                         <span class="badge <?=$isExpired ? 'badge-danger' : 'badge-success'?>">
                             <?=$isExpired ? 'Scaduta' : 'Attiva'?>
@@ -165,6 +192,7 @@ $cas = $pdo->query("SELECT * FROM cas ORDER BY created_at DESC")->fetchAll();
 </div>
 
 <script>
+// Gestione della visualizzazione condizionale della password
 document.getElementById('protect_with_password').addEventListener('change', function() {
     const passwordBlock = document.getElementById('password_secure_block');
     const passwordInput = document.getElementById('ca_password');
@@ -176,6 +204,20 @@ document.getElementById('protect_with_password').addEventListener('change', func
         passwordBlock.style.display = 'none';
         passwordInput.removeAttribute('required');
         passwordInput.value = '';
+    }
+});
+
+// Scambio condizionale dei selettori (Bit RSA vs Curve ECC)
+document.getElementById('key_type').addEventListener('change', function() {
+    const rsaWrapper = document.getElementById('rsa_options_wrapper');
+    const eccWrapper = document.getElementById('ecc_options_wrapper');
+    
+    if (this.value === 'ecc') {
+        rsaWrapper.style.display = 'none';
+        eccWrapper.style.display = 'block';
+    } else {
+        rsaWrapper.style.display = 'block';
+        eccWrapper.style.display = 'none';
     }
 });
 </script>
