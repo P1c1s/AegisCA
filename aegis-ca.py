@@ -1,0 +1,282 @@
+#!/usr/bin/env python3
+import argparse
+import sys
+import os
+import mysql.connector
+import bcrypt
+from tabulate import tabulate
+
+# --- CONFIGURAZIONE ---
+VERSION = "3.1.29"
+DB_CONFIG = {
+    "user": "lorenzo",
+    "password": "qss-s3E-IH9_Khz",
+    "database": "aegis_ca",
+    "host": "127.0.0.1",
+    "port": 3306
+}
+
+# --- UI & COLORI INTERFACCIA ---
+class UI:
+    CYAN = "\033[96m"
+    GREEN = "\033[92m"
+    YELLOW = "\033[93m"
+    RED = "\033[91m"
+    BOLD = "\033[1m"
+    END = "\033[0m"
+
+    @staticmethod
+    def header(text): print(f"\n{UI.CYAN}{UI.BOLD}>>> {text.upper()}{UI.END}")
+    @staticmethod
+    def success(text): print(f"{UI.GREEN}  ✔ {text}{UI.END}")
+    @staticmethod
+    def error(text): print(f"{UI.RED}  ✘ ERRORE: {text}{UI.END}", file=sys.stderr)
+
+# --- FORMATTER PER HELP COLORATO ---
+class ColorHelpFormatter(argparse.RawTextHelpFormatter):
+    """Sottoclasse personalizzata per applicare i colori ANSI all'output di argparse --help"""
+    def _format_action(self, action):
+        parts = super()._format_action(action)
+        if action.option_strings:
+            for option in action.option_strings:
+                parts = parts.replace(option, f"{UI.GREEN}{option}{UI.END}")
+        elif action.choices:
+            for choice in action.choices:
+                parts = parts.replace(choice, f"{UI.GREEN}{choice}{UI.END}")
+        elif action.dest and action.dest != "help":
+            parts = parts.replace(action.dest, f"{UI.GREEN}{action.dest}{UI.END}")
+        return parts
+
+    def start_section(self, heading):
+        colored_heading = f"{UI.CYAN}{UI.BOLD}{heading}{UI.END}"
+        super().start_section(colored_heading)
+
+# --- DATABASE MANAGER ---
+class AegisDB:
+    def __init__(self):
+        self.conn = None
+        socket_paths = ['/var/run/mysqld/mysqld.sock', '/var/lib/mysql/mysql.sock', '/tmp/mysql.sock']
+        
+        for sock in socket_paths:
+            if os.path.exists(sock):
+                try:
+                    self.conn = mysql.connector.connect(unix_socket=sock, **{k:v for k,v in DB_CONFIG.items() if k != 'host'})
+                    return
+                except mysql.connector.Error: continue
+        
+        try:
+            self.conn = mysql.connector.connect(**DB_CONFIG)
+        except mysql.connector.Error as e:
+            UI.error(f"Connessione DB fallita: {e}")
+            sys.exit(1)
+    
+    def execute(self, query, params=None):
+        cursor = self.conn.cursor(dictionary=True)
+        cursor.execute(query, params or ())
+        result = cursor.fetchall() if cursor.with_rows else None
+        self.conn.commit()
+        cursor.close()
+        return result
+
+    def close(self): self.conn.close()
+
+# --- LOGICA DEI COMANDI ---
+class UserManager:
+    @staticmethod
+    def run(db, args):
+        if args.action == 'list':
+            rows = db.execute("SELECT id, username, created_at FROM users")
+            UI.header("Gestione Utenti")
+            print(tabulate([[r['id'], r['username'], r['created_at']] for r in rows], headers=["ID", "Username", "Data Creazione"], tablefmt="simple"))
+        
+        elif args.action == 'create':
+            if not args.username or not args.password:
+                UI.error("Parametri obbligatori mancanti: usa -u [user] -p [pass]")
+                return
+            hashed = bcrypt.hashpw(args.password.encode(), bcrypt.gensalt()).decode()
+            db.execute("INSERT INTO users (username, password) VALUES (%s, %s)", (args.username, hashed))
+            UI.success(f"Utente '{args.username}' registrato nel sistema.")
+            
+        elif args.action == 'update':
+            if not args.username:
+                UI.error("Specificare l'utente da modificare con -u [username_attuale]")
+                return
+            
+            user_exists = db.execute("SELECT id FROM users WHERE username = %s", (args.username,))
+            if not user_exists:
+                UI.error(f"L'utente '{args.username}' non esiste nel database.")
+                return
+
+            if args.new_password:
+                hashed = bcrypt.hashpw(args.new_password.encode(), bcrypt.gensalt()).decode()
+                db.execute("UPDATE users SET password = %s WHERE username = %s", (hashed, args.username))
+                UI.success(f"Password aggiornata con successo per l'utente '{args.username}'.")
+
+            if args.new_username:
+                try:
+                    db.execute("UPDATE users SET username = %s WHERE username = %s", (args.new_username, args.username))
+                    UI.success(f"Username modificato da '{args.username}' a '{args.new_username}'.")
+                except mysql.connector.Error as e:
+                    UI.error(f"Impossibile rinominare l'utente: {e}")
+
+            if not args.new_password and not args.new_username:
+                UI.error("Nessun dato di aggiornamento fornito. Usa --new-username o --new-password.")
+
+class CertManager:
+    @staticmethod
+    def run(db, args):
+        # AZIONE: LIST
+        if args.action == 'list':
+            if not args.type:
+                UI.error("Specificare il tipo con -t [ca|cert]")
+                return
+            table = "cas" if args.type == 'ca' else "certificates"
+            rows = db.execute(f"SELECT id, common_name, valid_from, valid_to FROM {table}")
+            UI.header(f"Elenco {table.upper()}")
+            print(tabulate([[r['id'], r['common_name'], r['valid_from'], r['valid_to']] for r in rows], 
+                           headers=["ID", "Common Name", "Valido Dal", "Valido Al"], tablefmt="simple"))
+
+        # AGGIORNATO: SUPPORTO WILDCARD E IMPORT MULTIPLO
+        elif args.action == 'import':
+            if not args.file or not args.type:
+                UI.error("Specificare il nome base o wildcard con -f e il tipo con -t [ca|cert]")
+                return
+            
+            # Ricava i nomi "base" rimuovendo .crt e .key, usando un set per evitare duplicati
+            base_names = set()
+            for filepath in args.file:
+                if os.path.isdir(filepath):
+                    continue # Salta le cartelle se passate per errore
+                
+                if filepath.endswith('.crt') or filepath.endswith('.key'):
+                    base_names.add(filepath[:-4])
+                else:
+                    base_names.add(filepath)
+
+            if not base_names:
+                UI.error("Nessun file valido trovato per l'importazione.")
+                return
+
+            for base_name in base_names:
+                crt_path = f"{base_name}.crt"
+                key_path = f"{base_name}.key"
+
+                common_name = os.path.basename(base_name)
+
+                if not os.path.exists(crt_path) or not os.path.exists(key_path):
+                    UI.error(f"Coppia incompleta per '{common_name}'. Trovati entrambi? ({crt_path}, {key_path})")
+                    continue
+                
+                with open(crt_path, 'r') as f_crt: cert_content = f_crt.read()
+                with open(key_path, 'r') as f_key: key_content = f_key.read()
+
+                try:
+                    if args.type == 'ca':
+                        db.execute("""
+                            INSERT INTO cas (common_name, subject_country, subject_state, subject_locality, subject_organization, subject_org_unit, cert_data, key_data, key_bits, valid_from, valid_to) 
+                            VALUES (%s, 'IT', 'RM', 'Roma', 'Aegis', 'CA', %s, %s, 2048, NOW(), NOW() + INTERVAL 1 YEAR)
+                        """, (common_name, cert_content, key_content))
+                        UI.success(f"CA '{common_name}' importata con successo.")
+                    else:
+                        db.execute("""
+                            INSERT INTO certificates (ca_id, common_name, subject_country, subject_state, subject_locality, subject_organization, subject_org_unit, cert_data, key_data, key_bits, valid_from, valid_to) 
+                            VALUES (1, %s, 'IT', 'RM', 'Roma', 'Aegis', 'Node', %s, %s, 2048, NOW(), NOW() + INTERVAL 1 YEAR)
+                        """, (common_name, cert_content, key_content))
+                        UI.success(f"Certificato '{common_name}' importato con successo.")
+                except mysql.connector.Error as e:
+                    UI.error(f"Errore DB durante l'importazione di '{common_name}': {e}")
+
+        # AGGIORNATO: ESPORTA ENTRAMBI I FILE (.crt e .key)
+        elif args.action == 'export':
+            if not args.type:
+                UI.error("Specificare il tipo con -t [ca|cert]")
+                return
+            
+            table = "cas" if args.type == 'ca' else "certificates"
+            
+            query = f"SELECT common_name, cert_data, key_data FROM {table}"
+            params = ()
+
+            if args.cn and args.cn.lower() != 'all':
+                query += " WHERE common_name = %s"
+                params = (args.cn,)
+                rows = db.execute(query, params)
+                
+                if rows:
+                    clean_name = args.cn.replace('*', 'wildcard')
+                    with open(f"{clean_name}.crt", "w") as f: f.write(rows[0]['cert_data'])
+                    with open(f"{clean_name}.key", "w") as f: f.write(rows[0]['key_data'])
+                    UI.success(f"File esportati correttamente: {clean_name}.crt e {clean_name}.key")
+                else:
+                    UI.error(f"Nessun elemento trovato per '{args.cn}' nella tabella '{args.type}'")
+            
+            else:
+                UI.header(f"Esportazione di massa: {table.upper()}")
+                rows = db.execute(query)
+                
+                if not rows:
+                    UI.error(f"Nessun dato trovato nella tabella '{table}' per l'esportazione di massa.")
+                    return
+                
+                export_dir = f"exported_{table}"
+                os.makedirs(export_dir, exist_ok=True)
+                
+                count = 0
+                for row in rows:
+                    clean_name = row['common_name'].replace('*', 'wildcard')
+                    path_crt = os.path.join(export_dir, f"{clean_name}.crt")
+                    path_key = os.path.join(export_dir, f"{clean_name}.key")
+                    
+                    with open(path_crt, "w") as f: f.write(row['cert_data'])
+                    with open(path_key, "w") as f: f.write(row['key_data'])
+                    count += 1
+                
+                UI.success(f"Esportati con successo {count} certificati e chiavi nella cartella '{export_dir}/'")
+
+# --- CORE PARSER ---
+def main():
+    parser = argparse.ArgumentParser(
+        description=f"{UI.YELLOW}Aegis-CA: A modern cryptographic manager designed to store, manage and rotate CA and SSL certificates.{UI.END}",
+        formatter_class=ColorHelpFormatter,
+        add_help=False
+    )
+
+    parser.add_argument("-h", "--help", action="help", help="show this help message and exit")
+    parser.add_argument("-v", "--verbose", action="store_true", help="set verbosity level")
+    parser.add_argument("-V", "--version", action="version", version=f"%(prog)s {VERSION}", help="show version")
+
+    sub = parser.add_subparsers(dest="command", metavar="COMMAND")
+
+    # Sotto-comando: user
+    p_user = sub.add_parser('user', help="Gestione delle credenziali e degli utenti amministrativi", formatter_class=ColorHelpFormatter)
+    p_user.add_argument('action', choices=['list', 'create', 'update'], help="Azione utente da eseguire")
+    p_user.add_argument('-u', '--username', metavar='USER', help="Username attuale dell'utente (richiesto per create e update)")
+    p_user.add_argument('-p', '--password', metavar='PASS', help="Password in chiaro (richiesto solo per create)")
+    p_user.add_argument('--new-username', metavar='NEW_USER', help="Nuovo username da assegnare (solo per update)")
+    p_user.add_argument('--new-password', metavar='NEW_PASS', help="Nuova password in chiaro da crittografare (solo per update)")
+    p_user.set_defaults(handler=UserManager)
+
+    # Sotto-comando: cert
+    p_cert = sub.add_parser('cert', help="Gestione dei file, importazione ed esportazione massiva delle CA/Certificati", formatter_class=ColorHelpFormatter)
+    p_cert.add_argument('action', choices=['list', 'import', 'export'], help="Azione sui file crittografici")
+    p_cert.add_argument('-t', '--type', choices=['ca', 'cert'], help="Specifica se l'operazione è su una CA o su un certificato foglia")
+    p_cert.add_argument('-f', '--file', nargs='+', metavar='PATH', help="Nome base del file o wildcard (es. cartella/*)")
+    p_cert.add_argument('--cn', metavar='NAME', help="Common Name (CN) specifico da esportare. Omettere o usare 'all' per esportazione di massa")
+    p_cert.set_defaults(handler=CertManager)
+
+    args = parser.parse_args()
+
+    if not args.command:
+        parser.print_help()
+        sys.exit(0)
+
+    db = AegisDB()
+    try:
+        args.handler.run(db, args)
+    except Exception as e:
+        UI.error(f"Errore di esecuzione: {e}")
+    finally:
+        db.close()
+
+if __name__ == "__main__":
+    main()
