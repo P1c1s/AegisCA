@@ -208,6 +208,10 @@ th {
     font-weight: 600; 
 }
 
+td a{
+    text-decoration: none;
+    color: white !important;
+}
 
 /* ==========================================================================
    7. COMPONENTS (Badge e Alert Box)

@@ -170,7 +170,7 @@ $certs = $pdo->query("SELECT c.*, ca.common_name as ca_name FROM certificates c 
                     $algo = strtoupper($cert['key_type'] ?? 'rsa');
                 ?>
                 <tr>
-                    <td><strong><?=htmlspecialchars($cert['common_name'])?></strong></td>
+                    <td><strong><a href="http://<?=htmlspecialchars($cert['common_name'])?>"><?=htmlspecialchars($cert['common_name'])?></a></strong></td>
                     <td><span style="color:var(--accent);"><?=htmlspecialchars($cert['ca_name'])?></span></td>
                     <td><small><?=htmlspecialchars($cert['san_dns'] ?? '')?></small></td>
                     <td><?=htmlspecialchars($cert['valid_to'])?></td>

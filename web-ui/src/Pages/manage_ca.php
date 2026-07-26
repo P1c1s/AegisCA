@@ -35,8 +35,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_ca'])) {
     // Assegnazione della specifica (Curva per ECC o Bit per RSA)
     $keySpec = ($keyType === 'ecc') ? ($_POST['key_curve_ecc'] ?? 'prime256v1') : ($_POST['key_bits_rsa'] ?? 4096);
     
-    $encryptKey = isset($_POST['protect_with_password']);
-    $caPassword = ($encryptKey && !empty($_POST['ca_password'])) ? $_POST['ca_password'] : null;
+    // Gestione Password Opzionale: se vuota o composta da soli spazi rimane null
+    $caPassword = !empty(trim($_POST['ca_password'] ?? '')) ? trim($_POST['ca_password']) : null;
 
     try {
         // Passiamo $keyType e $keySpec alla classe SslEngine
@@ -125,21 +125,13 @@ $cas = $pdo->query("SELECT * FROM cas ORDER BY created_at DESC")->fetchAll();
                 </div>
             </div>
 
-            <div class="form-group" style="margin: 15px 0;">
-                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-                    <input type="checkbox" name="protect_with_password" id="protect_with_password" value="1">
-                    <strong>Proteggi la chiave privata di questa CA con una password</strong>
-                </label>
-            </div>
-
-            <div id="password_secure_block" style="display: none; background: var(--bg-dark); padding: 15px; border-radius: 6px; border: 1px solid var(--border); margin-bottom: 20px;">
-                <div class="form-group" style="margin: 0;">
-                    <label for="ca_password" style="color: var(--text-main); font-weight: bold;">Password della CA *</label>
-                    <input type="password" name="ca_password" id="ca_password" placeholder="Inserisci una passphrase robusta">
-                    <small style="color: var(--text-muted); display: block; margin-top: 5px;">
-                        Nota: Questa password ti verrà richiesta ogni volta che dovrai rilasciare un certificato usando questa CA.
-                    </small>
-                </div>
+            <!-- Campo Password sempre visibile e opzionale -->
+            <div class="form-group" style="margin-bottom: 1.5rem;">
+                <label for="ca_password">Password CA (Opzionale)</label>
+                <input type="password" name="ca_password" id="ca_password" placeholder="Lascia vuoto se non vuoi proteggere la chiave con password">
+                <small style="color: var(--text-muted); display: block; margin-top: 4px;">
+                    Nota: Se inserisci una password, ti verrà richiesta ogni volta che dovrai emettere un certificato con questa CA.
+                </small>
             </div>
 
             <button type="submit" name="create_ca" class="btn">Genera Root CA</button>
@@ -192,21 +184,6 @@ $cas = $pdo->query("SELECT * FROM cas ORDER BY created_at DESC")->fetchAll();
 </div>
 
 <script>
-// Gestione della visualizzazione condizionale della password
-document.getElementById('protect_with_password').addEventListener('change', function() {
-    const passwordBlock = document.getElementById('password_secure_block');
-    const passwordInput = document.getElementById('ca_password');
-    
-    if (this.checked) {
-        passwordBlock.style.display = 'block';
-        passwordInput.setAttribute('required', 'required');
-    } else {
-        passwordBlock.style.display = 'none';
-        passwordInput.removeAttribute('required');
-        passwordInput.value = '';
-    }
-});
-
 // Scambio condizionale dei selettori (Bit RSA vs Curve ECC)
 document.getElementById('key_type').addEventListener('change', function() {
     const rsaWrapper = document.getElementById('rsa_options_wrapper');
