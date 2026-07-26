@@ -60,7 +60,11 @@ WORKDIR /
 COPY ./entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
-# 10. Espone la porta 80 (e la 3306 opzionale se vuoi accedere al DB da fuori)
+# 10. Healthcheck per monitorare la Web UI
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
+  CMD curl -f -s http://localhost:80/ || exit 1
+
+# 11. Espone la porta 80 (e la 3306 opzionale se vuoi accedere al DB da fuori)
 EXPOSE 80
 
 VOLUME ["/data"]
