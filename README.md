@@ -137,8 +137,6 @@ Download the [docker-compose.yml](https://github.com/P1c1s/AegisCA/blob/main/doc
 ```bash
 docker compose up -d
 ```
-Ecco il testo pronto in inglese (perfetto da aggiungere al file `README.md`):
-
 
 ## First Configuration
 
