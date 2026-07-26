@@ -20,8 +20,8 @@ For seamless local traffic routing, we highly recommend pairing Aegis CA with [N
 # 📚 Table of Contents
 
 * [✨ Features](#-features)
-* [🛠️ Tech Stack](#️-tech-stack)
-* [📦 Docker Installation](#-docker-installation)
+* [🛠️ Tech Stack](#-tech-stack)
+* [📦 Installation](#-installation)
 * [💻 Aegis CA CLI](#-aegis-ca-cli)
 
 ---
@@ -39,7 +39,7 @@ For seamless local traffic routing, we highly recommend pairing Aegis CA with [N
 
 <!-- ![Login](web-ui/public/assets/img/login.png) -->
 
----
+
 
 ## 🏛️ Certificate Authority (Root CA) Management
 
@@ -50,7 +50,6 @@ For seamless local traffic routing, we highly recommend pairing Aegis CA with [N
 
 ![CA Management](resources/ca.png)
 
----
 
 ## 🚀 SSL Certificate Issuance
 
@@ -94,8 +93,9 @@ Aegis CA follows a **No Framework** philosophy, prioritizing simplicity, code re
 
 ---
 
-# 📦 Docker Installation
+# 📦 Installation
 
+## Docker
 Using **Docker** is the recommended method to install and run Aegis CA.
 
 The containerized approach allows you to:
@@ -109,19 +109,48 @@ The official image is available on the GitHub Container Registry:
 
 https://github.com/users/P1c1s/packages/container/package/aegis-ca
 
-## Download the image
+#### Download the image
 
 ```bash
 docker pull ghcr.io/p1c1s/aegis-ca:latest
 ```
 
-## Avvio con Docker Compose
+#### Running with Docker
 
-Creare un file `docker-compose.yml` e avviare i servizi:
+You can pull and run the container directly using the Docker CLI:
+
+```bash 
+docker run -d \
+  --name aegis-ca \
+  --hostname aegis-ca \
+  --restart always \
+  -e TZ=Europe/Rome \
+  -p 8080:80 \
+  -v aegis-ca_data:/data \
+  ghcr.io/p1c1s/aegis-ca:latest
+```
+#### Docker Compose
+
+Download the [docker-compose.yml](https://github.com/P1c1s/AegisCA/blob/main/docker-compose.yml
+) file from the repository, or create one locally. Then start the stack using Docker.
 
 ```bash
 docker compose up -d
 ```
+Ecco il testo pronto in inglese (perfetto da aggiungere al file `README.md`):
+
+
+## First Configuration
+
+Once the container is up and running:
+
+1. Open your web browser and navigate to `http://<your-ip>:8080` (replace `<your-ip>` with your server's IP address).
+2. Log in using the default credentials:
+* **Username:** `admin`
+* **Password:** `admin`
+
+
+3. **Important:** Make sure to change the default admin password immediately after your first login for security reasons.
 
 ---
 
