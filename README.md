@@ -23,7 +23,7 @@ For seamless local traffic routing, we highly recommend pairing Aegis CA with [N
 * [🛠️ Tech Stack](#-tech-stack)
 * [📦 Installation](#-installation)
 * [📟 Aegis CA CLI](#-aegis-ca-cli)
-* [🛡️ Root CA Installation & Device Trust](#-root-ca-installation--device-trust)
+* [🛡️ Root CA Installation & Device Trust](#️-root-ca-installation--device-trust)
 
 ---
 
@@ -32,6 +32,7 @@ For seamless local traffic routing, we highly recommend pairing Aegis CA with [N
 ### Security and Authentication
 
 * Secure login with password hashing via PHP's `password_hash()`.
+* CSRF (Cross-Site Request Forgery) protection on all forms and state-changing requests.
 * Password changes directly from the admin area.
 * Secure session management with access control on all protected pages.
 * Multi-admin support.
@@ -46,8 +47,19 @@ For seamless local traffic routing, we highly recommend pairing Aegis CA with [N
 
 * Guided Root CA creation.
 * Separate input fields for Subject (`C`, `ST`, `L`, `O`, `OU`, `CN`) with automatic X.509 standard composition.
+
 * Validity monitoring with creation date, expiration, and status (Active/Expired).
 * Import and export of certificates (`.crt`) and private keys (`.key`).
+
+
+| Attribute | Full Name | Description | Example |
+| :--- | :--- | :--- | :--- |
+| **`C`** | Country Name | Two-letter ISO country code | `IT`, `US`, `DE` |
+| **`ST`** | State or Province | State, region, or province | `Lazio`, `California` |
+| **`L`** | Locality Name | City or town | `Rome`, `San Francisco` |
+| **`O`** | Organization Name | Company, lab, or organization name | `AegisCA`, `MyHomeLab` |
+| **`OU`** | Organizational Unit | Department or sub-division | `IT`, `DevOps`, `Security` |
+| **`CN`** | Common Name | Main identity (CA Name, Domain, or IP) | `Aegis Root CA`, `service.local` |
 
 ![CA Management](resources/ca.png)
 
@@ -64,7 +76,7 @@ For seamless local traffic routing, we highly recommend pairing Aegis CA with [N
   * IPv4 and IPv6 addresses
 * Default validity of **825 days**, in line with modern browser recommendations.
 
-![Dashboard](resources//dashboard.png)
+![Dashboard](resources/dashboard.png)
 
 ---
 
