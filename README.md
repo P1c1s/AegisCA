@@ -22,13 +22,14 @@ For seamless local traffic routing, we highly recommend pairing Aegis CA with [N
 * [✨ Features](#-features)
 * [🛠️ Tech Stack](#-tech-stack)
 * [📦 Installation](#-installation)
-* [💻 Aegis CA CLI](#-aegis-ca-cli)
+* [📟 Aegis CA CLI](#-aegis-ca-cli)
+* [🛡️ Root CA Installation & Device Trust](#-root-ca-installation--device-trust)
 
 ---
 
 # ✨ Features
 
-## 🛡️ Security and Authentication
+### Security and Authentication
 
 * Secure login with password hashing via PHP's `password_hash()`.
 * Password changes directly from the admin area.
@@ -41,7 +42,7 @@ For seamless local traffic routing, we highly recommend pairing Aegis CA with [N
 
 
 
-## 🏛️ Certificate Authority (Root CA) Management
+### Certificate Authority (Root CA) Management
 
 * Guided Root CA creation.
 * Separate input fields for Subject (`C`, `ST`, `L`, `O`, `OU`, `CN`) with automatic X.509 standard composition.
@@ -51,7 +52,7 @@ For seamless local traffic routing, we highly recommend pairing Aegis CA with [N
 ![CA Management](resources/ca.png)
 
 
-## 🚀 SSL Certificate Issuance
+### SSL Certificate Issuance
 
 * Certificate signing using any CA present in the database.
 * Full **Subject Alternative Names (SAN)** support.
@@ -152,7 +153,7 @@ Once the container is up and running:
 
 ---
 
-# Aegis CA CLI
+# 📟 Aegis CA CLI
 
 Aegis CA also includes a **Command Line Interface (CLI)** designed primarily as a **maintenance and recovery tool**. While it allows administrators to manage users, Certificate Authorities, and certificates directly from the terminal, its main purpose is to provide a reliable way to perform administrative and recovery tasks when the web interface is unavailable or insufficient.
 
@@ -172,7 +173,7 @@ aegis-ca --help
 
 ---
 
-## 👤 User Management (`user`)
+## User Management (`user`)
 
 Provides commands for creating and managing application users.
 
@@ -207,7 +208,7 @@ aegis-ca user update \
 
 ---
 
-## 🔐 Certificate Management (`cert`)
+## Certificate Management (`cert`)
 
 Provides commands for managing Certificate Authorities and certificates stored in the database.
 
@@ -277,3 +278,67 @@ aegis-ca cert export \
     -t ca \
     --cn "HomeLab-Root-CA"
 ```
+
+---
+
+# 🛡️ Root CA Installation & Device Trust
+
+To start trusting the SSL/TLS certificates issued by Aegis CA across your devices, you only need to **install and trust your Root CA certificate (`.crt`) once**. 
+
+Installing your Root CA certificate establishes a **Chain of Trust** directly on your system. In traditional setups, every single service (such as Proxmox, Pi-hole, or Home Assistant) requires you to manually import its individual SSL certificate onto every device you use. This quickly becomes a maintenance nightmare, as every renewal or new service forces you to repeat the entire installation process across all your PCs and smartphones.
+
+By installing the Aegis Root CA certificate **just once per device**, your system's trust store accepts it as a trusted authority. From that point on, any SSL certificate signed by your Root CA inherits that trust automatically through the cryptographic chain — eliminating browser security warnings (`NET::ERR_CERT_AUTHORITY_INVALID`) forever. Whether you add 10 new local services or renew expiring certificates years down the line, your devices will seamlessly trust them without any further manual steps.
+
+### Step 1: Export your Root CA
+
+1. Log in to the Aegis CA Web Dashboard.
+2. Navigate to **CA Management**.
+3. Locate your Root CA and click **Export Certificate** (download the `.crt` file).
+
+---
+
+### Step 2: Installing on devices
+
+#### Windows
+1. Double-click the downloaded `.crt` file.
+2. Click **Install Certificate...**
+3. Select **Local Machine** (requires admin rights) or **Current User**, then click **Next**.
+4. Choose **Place all certificates in the following store**.
+5. Click **Browse...** and select **Trusted Root Certification Authorities** (Autorità di certificazione radice attendibili).
+6. Click **Next** → **Finish**, then confirm the security prompt.
+
+#### macOS
+1. Double-click the downloaded `.crt` file to open **Keychain Access**.
+2. Drag the certificate into the **System** or **login** keychain.
+3. Double-click the newly imported Root CA certificate in Keychain Access.
+4. Expand the **Trust** section and set **When using this certificate** to **Always Trust**.
+5. Close the window and enter your Mac password to confirm.
+
+#### Linux (Ubuntu / Debian)
+1. Copy the `.crt` file to the certificates directory:
+   ```bash
+   sudo cp my-root-ca.crt /usr/local/share/ca-certificates/my-root-ca.crt
+   ```
+2. Update the system CA store:
+   ```bash
+   sudo update-ca-certificates
+   ```
+
+
+#### Android
+1. Transfer or download the `.crt` file to your Android device.
+2. Open **Settings** → **Security & Privacy** → **More Security Settings** → **Encryption & credentials**.
+3. Tap **Install a certificate** → **CA certificate**.
+4. A warning may appear; tap **Install anyway**.
+5. Select the `.crt` file from your storage and confirm with your PIN/Fingerprint.
+
+> ℹ️ *Note: Menu names may slightly vary depending on your Android manufacturer (Samsung, Xiaomi, Pixel).*
+
+#### iOS / iPadOS
+1. AirDrop or download the `.crt` file using Safari.
+2. A prompt will say *Profile Downloaded*. Open **Settings** → **Profile Downloaded** (near the top) and tap **Install** in the top right.
+3. Follow the prompts and enter your passcode to install the profile.
+4. **Crucial Step:** Go to **Settings** → **General** → **About** → **Certificate Trust Settings** (at the very bottom).
+5. Under *Enable full trust for root certificates*, toggle the switch **ON** for your Aegis Root CA.
+
+---
