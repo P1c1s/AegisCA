@@ -1,29 +1,28 @@
 <?php
 // src/Pages/dashboard.php
-// Nota: Auth, $pdo e il layout grafico sono già stati gestiti a monte dal PageController.
+// Nota: Auth, $pdo e il layout sono gestiti centralmente dal PageController.
 
 global $pdo;
 
 // 1. Recuperiamo le metriche principali dal Database
 try {
     // Conteggio totale delle Certificate Authorities
-    $totalCas = $pdo->query("SELECT COUNT(*) FROM cas")->fetchColumn();
+    $totalCas = (int)$pdo->query("SELECT COUNT(*) FROM cas")->fetchColumn();
 
     // Conteggio totale dei certificati SSL emessi
-    $totalCerts = $pdo->query("SELECT COUNT(*) FROM certificates")->fetchColumn();
+    $totalCerts = (int)$pdo->query("SELECT COUNT(*) FROM certificates")->fetchColumn();
 
-    // Certificati scaduti o in scadenza
-    $expiredCerts = 0;
-    $activeCerts = 0;
-    
-    $certs = $pdo->query("SELECT valid_to FROM certificates")->fetchAll();
-    foreach ($certs as $c) {
-        if (strtotime($c['valid_to']) < time()) {
-            $expiredCerts++;
-        } else {
-            $activeCerts++;
-        }
-    }
+    // Calcolo diretto in SQL dei certificati scaduti e attivi (molto più efficiente e sicuro)
+    $stats = $pdo->query("
+        SELECT 
+            SUM(CASE WHEN valid_to < NOW() THEN 1 ELSE 0 END) AS expired_certs,
+            SUM(CASE WHEN valid_to >= NOW() THEN 1 ELSE 0 END) AS active_certs
+        FROM certificates
+    ")->fetch();
+
+    $expiredCerts = (int)($stats['expired_certs'] ?? 0);
+    $activeCerts  = (int)($stats['active_certs'] ?? 0);
+
 } catch (PDOException $e) {
     $totalCas = 0;
     $totalCerts = 0;

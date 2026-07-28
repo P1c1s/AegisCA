@@ -1,25 +1,31 @@
 <?php
 // src/Pages/register.php
-// Nota: Auth, $pdo e head.php sono già stati gestiti dal PageController.
+// Nota: Auth, $pdo e il layout sono gestiti centralmente dal PageController.
 
 $msg = ''; 
 $type = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $username = trim($_POST['username'] ?? '');
-    $password = $_POST['password'] ?? '';
+    // Verifica CSRF
+    if (!verifyCsrfToken($_POST['csrf_token'] ?? '')) {
+        $msg = 'Richiesta non valida o token CSRF scaduto.';
+        $type = 'danger';
+    } else {
+        $username = trim($_POST['username'] ?? '');
+        $password = $_POST['password'] ?? '';
 
-    if (!empty($username) && !empty($password)) {
-        if (Auth::register($username, $password)) {
-            $msg = 'Registrazione completata. Puoi effettuare il login.'; 
-            $type = 'success';
+        if (!empty($username) && !empty($password)) {
+            if (Auth::register($username, $password)) {
+                $msg = 'Registrazione completata. Puoi effettuare il login.'; 
+                $type = 'success';
+            } else {
+                $msg = 'Errore durante la registrazione (Username già esistente).'; 
+                $type = 'danger';
+            }
         } else {
-            $msg = 'Errore durante la registrazione (Username già esistente).'; 
+            $msg = 'Tutti i campi sono obbligatori.';
             $type = 'danger';
         }
-    } else {
-        $msg = 'Tutti i campi sono obbligatori.';
-        $type = 'danger';
     }
 }
 ?>
@@ -40,6 +46,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <?php endif; ?>
         
         <form method="POST">
+            <!-- Campo Token CSRF -->
+            <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(getCsrfToken()) ?>">
+
             <div class="form-group" style="margin-bottom:1rem;">
                 <label>Username</label>
                 <input type="text" name="username" required>

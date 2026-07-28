@@ -9,47 +9,57 @@ $type = '';
 
 global $pdo;
 
-// Eliminazione CA
-if (isset($_GET['delete'])) {
-    $stmt = $pdo->prepare("DELETE FROM cas WHERE id = ?");
-    if ($stmt->execute([$_GET['delete']])) {
-        $msg = 'Certificate Authority rimossa con successo.'; 
-        $type = 'success';
+// Eliminazione CA (Convertita in POST + Token CSRF per massima sicurezza)
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_ca_id'])) {
+    if (!verifyCsrfToken($_POST['csrf_token'] ?? '')) {
+        $msg = 'Richiesta non valida o token CSRF scaduto.';
+        $type = 'danger';
+    } else {
+        $stmt = $pdo->prepare("DELETE FROM cas WHERE id = ?");
+        if ($stmt->execute([$_POST['delete_ca_id']])) {
+            $msg = 'Certificate Authority rimossa con successo.'; 
+            $type = 'success';
+        }
     }
 }
 
 // Creazione CA
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_ca'])) {
-    $dnData = [
-        'c'  => $_POST['country'] ?? '',
-        'st' => $_POST['state'] ?? '',
-        'l'  => $_POST['locality'] ?? '',
-        'o'  => $_POST['organization'] ?? '',
-        'ou' => $_POST['org_unit'] ?? '',
-        'cn' => $_POST['common_name'] ?? ''
-    ];
+    if (!verifyCsrfToken($_POST['csrf_token'] ?? '')) {
+        $msg = 'Richiesta non valida o token CSRF scaduto.';
+        $type = 'danger';
+    } else {
+        $dnData = [
+            'c'  => $_POST['country'] ?? '',
+            'st' => $_POST['state'] ?? '',
+            'l'  => $_POST['locality'] ?? '',
+            'o'  => $_POST['organization'] ?? '',
+            'ou' => $_POST['org_unit'] ?? '',
+            'cn' => $_POST['common_name'] ?? ''
+        ];
 
-    // Recupero dinamico del tipo di algoritmo
-    $keyType = isset($_POST['key_type']) ? strtolower($_POST['key_type']) : 'rsa';
-    
-    // Assegnazione della specifica (Curva per ECC o Bit per RSA)
-    $keySpec = ($keyType === 'ecc') ? ($_POST['key_curve_ecc'] ?? 'prime256v1') : ($_POST['key_bits_rsa'] ?? 4096);
-    
-    // Gestione Password Opzionale: se vuota o composta da soli spazi rimane null
-    $caPassword = !empty(trim($_POST['ca_password'] ?? '')) ? trim($_POST['ca_password']) : null;
+        // Recupero dinamico del tipo di algoritmo
+        $keyType = isset($_POST['key_type']) ? strtolower($_POST['key_type']) : 'rsa';
+        
+        // Assegnazione della specifica (Curva per ECC o Bit per RSA)
+        $keySpec = ($keyType === 'ecc') ? ($_POST['key_curve_ecc'] ?? 'prime256v1') : ($_POST['key_bits_rsa'] ?? 4096);
+        
+        // Gestione Password Opzionale: se vuota o composta da soli spazi rimane null
+        $caPassword = !empty(trim($_POST['ca_password'] ?? '')) ? trim($_POST['ca_password']) : null;
 
-    try {
-        // Passiamo $keyType e $keySpec alla classe SslEngine
-        if (SslEngine::createCA($dnData, intval($_POST['days']), $keyType, $keySpec, $caPassword)) {
-            $msg = 'CA Generata con Successo!'; 
-            $type = 'success';
-        } else {
-            $msg = 'Errore imprevisto durante la generazione della CA.'; 
+        try {
+            // Passiamo $keyType e $keySpec alla classe SslEngine
+            if (SslEngine::createCA($dnData, intval($_POST['days']), $keyType, $keySpec, $caPassword)) {
+                $msg = 'CA Generata con Successo!'; 
+                $type = 'success';
+            } else {
+                $msg = 'Errore imprevisto durante la generazione della CA.'; 
+                $type = 'danger';
+            }
+        } catch (Exception $e) {
+            $msg = $e->getMessage();
             $type = 'danger';
         }
-    } catch (Exception $e) {
-        $msg = $e->getMessage();
-        $type = 'danger';
     }
 }
 
@@ -64,6 +74,9 @@ $cas = $pdo->query("SELECT * FROM cas ORDER BY created_at DESC")->fetchAll();
     <div class="panel">
         <h3>Crea Nuova Local Certificate Authority (Root CA)</h3>
         <form method="POST">
+            <!-- Campo Token CSRF -->
+            <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(getCsrfToken()) ?>">
+
             <div class="form-grid">
                 <div class="form-group">
                     <label>Country (C)</label>
@@ -174,7 +187,13 @@ $cas = $pdo->query("SELECT * FROM cas ORDER BY created_at DESC")->fetchAll();
                     <td>
                         <a href="index.php?action=download&type=ca_cert&id=<?=$ca['id']?>" class="btn btn-sm">Esporta CRT</a>
                         <a href="index.php?action=download&type=ca_key&id=<?=$ca['id']?>" class="btn btn-sm" style="background-color:#64748b;">Esporta KEY</a>
-                        <a href="index.php?page=manage_ca&delete=<?=$ca['id']?>" class="btn btn-sm btn-danger" onclick="return confirm('Sei sicuro di voler eliminare questa CA e invalidare i certificati emessi?')">Elimina</a>
+                        
+                        <!-- Form Sicuro per l'eliminazione tramite POST + CSRF -->
+                        <form method="POST" style="display:inline-block;" onsubmit="return confirm('Sei sicuro di voler eliminare questa CA e invalidare i certificati emessi?')">
+                            <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(getCsrfToken()) ?>">
+                            <input type="hidden" name="delete_ca_id" value="<?=$ca['id']?>">
+                            <button type="submit" class="btn btn-sm btn-danger">Elimina</button>
+                        </form>
                     </td>
                 </tr>
                 <?php endforeach; ?>

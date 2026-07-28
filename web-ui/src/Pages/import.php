@@ -11,33 +11,43 @@ global $pdo;
 
 // Gestione POST per l'importazione CA
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['import_ca'])) {
-    if (!empty($_FILES['ca_cert']['tmp_name'])) {
-        $certData = file_get_contents($_FILES['ca_cert']['tmp_name']);
-        $keyData = !empty($_FILES['ca_key']['tmp_name']) ? file_get_contents($_FILES['ca_key']['tmp_name']) : null;
-
-        $res = ImportEngine::importCA($certData, $keyData);
-        $msg = $res['message'];
-        $type = $res['success'] ? 'success' : 'danger';
-    } else {
-        $msg = 'File certificato CA obbligatorio.'; 
+    if (!verifyCsrfToken($_POST['csrf_token'] ?? '')) {
+        $msg = 'Richiesta non valida o token CSRF scaduto.';
         $type = 'danger';
+    } else {
+        if (!empty($_FILES['ca_cert']['tmp_name'])) {
+            $certData = file_get_contents($_FILES['ca_cert']['tmp_name']);
+            $keyData = !empty($_FILES['ca_key']['tmp_name']) ? file_get_contents($_FILES['ca_key']['tmp_name']) : null;
+
+            $res = ImportEngine::importCA($certData, $keyData);
+            $msg = $res['message'];
+            $type = $res['success'] ? 'success' : 'danger';
+        } else {
+            $msg = 'File certificato CA obbligatorio.'; 
+            $type = 'danger';
+        }
     }
 }
 
 // Gestione POST per l'importazione Certificato Foglia
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['import_cert'])) {
-    if (!empty($_FILES['cert_file']['tmp_name'])) {
-        $caId = intval($_POST['ca_id']);
-        $sanString = $_POST['san_dns'] ?? '';
-        $certData = file_get_contents($_FILES['cert_file']['tmp_name']);
-        $keyData = !empty($_FILES['cert_key']['tmp_name']) ? file_get_contents($_FILES['cert_key']['tmp_name']) : null;
-
-        $res = ImportEngine::importCertificate($caId, $certData, $keyData, $sanString);
-        $msg = $res['message'];
-        $type = $res['success'] ? 'success' : 'danger';
-    } else {
-        $msg = 'File certificato obbligatorio.'; 
+    if (!verifyCsrfToken($_POST['csrf_token'] ?? '')) {
+        $msg = 'Richiesta non valida o token CSRF scaduto.';
         $type = 'danger';
+    } else {
+        if (!empty($_FILES['cert_file']['tmp_name'])) {
+            $caId = intval($_POST['ca_id']);
+            $sanString = $_POST['san_dns'] ?? '';
+            $certData = file_get_contents($_FILES['cert_file']['tmp_name']);
+            $keyData = !empty($_FILES['cert_key']['tmp_name']) ? file_get_contents($_FILES['cert_key']['tmp_name']) : null;
+
+            $res = ImportEngine::importCertificate($caId, $certData, $keyData, $sanString);
+            $msg = $res['message'];
+            $type = $res['success'] ? 'success' : 'danger';
+        } else {
+            $msg = 'File certificato obbligatorio.'; 
+            $type = 'danger';
+        }
     }
 }
 
@@ -54,6 +64,9 @@ $cas = $pdo->query("SELECT id, common_name FROM cas ORDER BY common_name ASC")->
         <div class="panel">
             <h3>Importa Esistente Certificate Authority (Root CA)</h3>
             <form method="POST" enctype="multipart/form-data">
+                <!-- Campo Token CSRF -->
+                <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(getCsrfToken()) ?>">
+
                 <div class="form-group" style="margin-bottom: 15px;">
                     <label>Certificato della CA (.crt, .pem, .cer) *</label>
                     <input type="file" name="ca_cert" accept=".crt,.pem,.cer" required>
@@ -69,6 +82,9 @@ $cas = $pdo->query("SELECT id, common_name FROM cas ORDER BY common_name ASC")->
         <div class="panel">
             <h3>Importa Esistente Certificato Foglia / End-Entity</h3>
             <form method="POST" enctype="multipart/form-data">
+                <!-- Campo Token CSRF -->
+                <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(getCsrfToken()) ?>">
+
                 <div class="form-group" style="margin-bottom: 15px;">
                     <label>Associa alla CA firmataria *</label>
                     <select name="ca_id" required>

@@ -9,45 +9,55 @@ $type = '';
 
 global $pdo;
 
-// Eliminazione Certificato
-if (isset($_GET['delete'])) {
-    $stmt = $pdo->prepare("DELETE FROM certificates WHERE id = ?");
-    if ($stmt->execute([$_GET['delete']])) {
-        $msg = 'Certificato rimosso dal sistema.'; 
-        $type = 'success';
+// Eliminazione Certificato (Convertita in POST + CSRF per sicurezza)
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_cert_id'])) {
+    if (!verifyCsrfToken($_POST['csrf_token'] ?? '')) {
+        $msg = 'Richiesta non valida o token CSRF scaduto.';
+        $type = 'danger';
+    } else {
+        $stmt = $pdo->prepare("DELETE FROM certificates WHERE id = ?");
+        if ($stmt->execute([$_POST['delete_cert_id']])) {
+            $msg = 'Certificato rimosso dal sistema.'; 
+            $type = 'success';
+        }
     }
 }
 
 // Creazione Certificato
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_cert'])) {
-    $dnData = [
-        'c'  => $_POST['country'] ?? '',
-        'st' => $_POST['state'] ?? '',
-        'l'  => $_POST['locality'] ?? '',
-        'o'  => $_POST['organization'] ?? '',
-        'ou' => $_POST['org_unit'] ?? '',
-        'cn' => $_POST['common_name'] ?? ''
-    ];
+    if (!verifyCsrfToken($_POST['csrf_token'] ?? '')) {
+        $msg = 'Richiesta non valida o token CSRF scaduto.';
+        $type = 'danger';
+    } else {
+        $dnData = [
+            'c'  => $_POST['country'] ?? '',
+            'st' => $_POST['state'] ?? '',
+            'l'  => $_POST['locality'] ?? '',
+            'o'  => $_POST['organization'] ?? '',
+            'ou' => $_POST['org_unit'] ?? '',
+            'cn' => $_POST['common_name'] ?? ''
+        ];
 
-    // Recupero dinamico del tipo di algoritmo
-    $keyType = isset($_POST['key_type']) ? strtolower($_POST['key_type']) : 'rsa';
-    
-    // Assegnazione della specifica (Curva per ECC o Bit per RSA)
-    $keySpec = ($keyType === 'ecc') ? ($_POST['key_curve_ecc'] ?? 'prime256v1') : ($_POST['key_bits_rsa'] ?? 2048);
-    $caPassword = !empty($_POST['ca_password']) ? $_POST['ca_password'] : null;
+        // Recupero dinamico del tipo di algoritmo
+        $keyType = isset($_POST['key_type']) ? strtolower($_POST['key_type']) : 'rsa';
+        
+        // Assegnazione della specifica (Curva per ECC o Bit per RSA)
+        $keySpec = ($keyType === 'ecc') ? ($_POST['key_curve_ecc'] ?? 'prime256v1') : ($_POST['key_bits_rsa'] ?? 2048);
+        $caPassword = !empty($_POST['ca_password']) ? $_POST['ca_password'] : null;
 
-    try {
-        // Passiamo $keyType e $keySpec al metodo aggiornato di SslEngine
-        if (SslEngine::createCertificate($_POST['ca_id'], $dnData, $_POST['san'] ?? '', intval($_POST['days']), $keyType, $keySpec, $caPassword)) {
-            $msg = 'Certificato SSL emesso e firmato con successo!'; 
-            $type = 'success';
-        } else {
-            $msg = 'Errore imprevisto durante la creazione del certificato.'; 
+        try {
+            // Passiamo $keyType e $keySpec al metodo aggiornato di SslEngine
+            if (SslEngine::createCertificate($_POST['ca_id'], $dnData, $_POST['san'] ?? '', intval($_POST['days']), $keyType, $keySpec, $caPassword)) {
+                $msg = 'Certificato SSL emesso e firmato con successo!'; 
+                $type = 'success';
+            } else {
+                $msg = 'Errore imprevisto durante la creazione del certificato.'; 
+                $type = 'danger';
+            }
+        } catch (Exception $e) {
+            $msg = $e->getMessage();
             $type = 'danger';
         }
-    } catch (Exception $e) {
-        $msg = $e->getMessage();
-        $type = 'danger';
     }
 }
 
@@ -63,6 +73,9 @@ $certs = $pdo->query("SELECT c.*, ca.common_name as ca_name FROM certificates c 
     <div class="panel">
         <h3>Emetti Nuovo Certificato SSL</h3>
         <form method="POST" id="certForm">
+            <!-- Campo Token CSRF -->
+            <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(getCsrfToken()) ?>">
+
             <div class="form-grid">
                 <div class="form-group">
                     <label>Autorità di Firma (CA)</label>
@@ -186,7 +199,13 @@ $certs = $pdo->query("SELECT c.*, ca.common_name as ca_name FROM certificates c 
                     <td>
                         <a href="index.php?action=download&type=cert_cert&id=<?=$cert['id']?>" class="btn btn-sm">Esporta CRT</a>
                         <a href="index.php?action=download&type=cert_key&id=<?=$cert['id']?>" class="btn btn-sm" style="background-color:#64748b;">Esporta KEY</a>
-                        <a href="index.php?page=manage_certs&delete=<?=$cert['id']?>" class="btn btn-sm btn-danger" onclick="return confirm('Vuoi cancellare il certificato?')">Elimina</a>
+                        
+                        <!-- Form di eliminazione protetto da CSRF -->
+                        <form method="POST" style="display:inline-block;" onsubmit="return confirm('Vuoi cancellare il certificato?')">
+                            <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(getCsrfToken()) ?>">
+                            <input type="hidden" name="delete_cert_id" value="<?=$cert['id']?>">
+                            <button type="submit" class="btn btn-sm btn-danger">Elimina</button>
+                        </form>
                     </td>
                 </tr>
                 <?php endforeach; ?>

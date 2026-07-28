@@ -18,9 +18,10 @@ if (!defined('ROOT_PATH')) {
 }
 
 // Rilevamento automatico del protocollo (HTTP o HTTPS)
-$protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? "https://" : "http://";
+$isSecure = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || ($_SERVER['SERVER_PORT'] ?? '') == 443;
+$protocol = $isSecure ? "https://" : "http://";
 
-// Rilevamento automatico dell'host corrente (IP Docker, IP di rete locale o dominio + eventuale porta)
+// Rilevamento automatico dell'host corrente
 $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
 
 // Generazione della BASE_URL dinamica
@@ -34,11 +35,40 @@ try {
         PDO::ATTR_EMULATE_PREPARES => false,
     ]);
 } catch (PDOException $e) {
-    // In produzione sarebbe meglio fare un log dell'errore invece di mostrarlo a schermo
     die("Errore critico di connessione al database."); 
 }
 
-// 5. Inizializzazione Sessione globale
+// 5. Inizializzazione Sessione e Impostazioni di Sicurezza Cookie
 if (session_status() === PHP_SESSION_NONE) {
+    // Configurazione cookie di sessione per mitigare XSS e CSRF a livello di browser
+    session_set_cookie_params([
+        'lifetime' => 0,
+        'path'     => '/',
+        'domain'   => '',
+        'secure'   => $isSecure, // True se sei in HTTPS
+        'httponly' => true,      // Impedisce l'accesso al cookie via JavaScript (XSS)
+        'samesite' => 'Lax'      // Protezione aggiuntiva nativa contro CSRF
+    ]);
     session_start();
+}
+
+// 6. Helper Globali per la Protezione CSRF
+/**
+ * Restituisce o genera il token CSRF corrente per la sessione.
+ */
+function getCsrfToken(): string {
+    if (empty($_SESSION['csrf_token'])) {
+        $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+    }
+    return $_SESSION['csrf_token'];
+}
+
+/**
+ * Verifica se il token inviato corrisponde a quello della sessione.
+ */
+function verifyCsrfToken(?string $token): bool {
+    if (empty($_SESSION['csrf_token']) || empty($token)) {
+        return false;
+    }
+    return hash_equals($_SESSION['csrf_token'], $token);
 }
