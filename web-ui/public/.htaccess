@@ -1,0 +1,9 @@
+# public/.htaccess
+RewriteEngine On
+
+# Se la risorsa richiesta non è un file reale...
+RewriteCond %{REQUEST_FILENAME} !-f
+# ...e non è una cartella reale...
+RewriteCond %{REQUEST_FILENAME} !-d
+# ...invia la richiesta a index.php
+RewriteRule ^(.*)$ index.php?page=$1 [QSA,L]

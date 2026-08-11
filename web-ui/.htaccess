@@ -1,4 +1,0 @@
-RewriteEngine On
-# Se la richiesta non punta già alla cartella public, reindirizza tutto lì dentro
-RewriteCond %{REQUEST_URI} !^/public/
-RewriteRule ^(.*)$ public/$1 [L]
