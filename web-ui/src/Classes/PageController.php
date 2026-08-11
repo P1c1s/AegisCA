@@ -68,6 +68,11 @@ class PageController {
                 require_once ROOT_PATH . 'templates/topbar.php';
             }
 
+            // Mostra il footer a qualsiasi utente loggato (anche su 404)
+            if (Auth::isLoggedIn()) {
+                require_once ROOT_PATH . 'templates/footer.php';
+            }
+
             // Inietta il contenuto catturato prima
             echo $pageContent;
         } else {

@@ -51,7 +51,7 @@ h2, h3 {
 
 
 /* ==========================================================================
-   3. NAVIGATION (Top Bar & Logo)
+   3. NAVIGATION (Top Bar & Footer & Logo)
    ========================================================================== */
 .top-bar { 
     position: fixed; 
@@ -65,7 +65,66 @@ h2, h3 {
     justify-content: space-between; 
     padding: 0 2rem; 
     background-color: var(--panel-dark); 
-    border-bottom: 1px solid var(--border); 
+    border-bottom: 1px solid var(--border);
+}
+
+.footer { 
+    position: fixed; 
+    bottom: 0; 
+    left: 0; 
+    right: 0; 
+    z-index: 1000; 
+    min-height: 56px; 
+    background-color: var(--panel-dark); 
+    border-top: 1px solid var(--border); 
+    display: flex;
+    align-items: center;            /* Centra verticalmente (asse Y) */
+    justify-content: space-between; /* Mantiene Logo a sx e Link a dx */
+    padding: 0.5rem 2rem;
+}
+
+.footer-meta {
+    /* Posizionamento assoluto per essere SEMPRE al centro esatto della barra */
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%); /* Centra perfettamente su X e Y */
+    
+    font-size: 0.8rem;
+    color: var(--text-muted, #888);
+    line-height: 1.3;
+    
+    display: flex;
+    flex-direction: column;
+    align-items: center;            /* Centra il testo interno */
+    text-align: center;
+    pointer-events: auto;           /* Mantiene i link cliccabili */
+}
+
+.footer-meta p {
+    margin: 0;
+    text-align: center;
+}
+
+.footer-meta a {
+    color: inherit;
+    text-decoration: underline;
+}
+
+.footer-meta .version {
+    font-size: 0.72rem;
+    opacity: 0.75;
+}
+
+.footer-meta .update-badge {
+    color: #28a745; /* Verde per far risaltare l'aggiornamento */
+    font-weight: bold;
+    text-decoration: none;
+    margin-left: 4px;
+}
+
+.footer-meta .update-badge:hover {
+    text-decoration: underline;
 }
 
 .logo {

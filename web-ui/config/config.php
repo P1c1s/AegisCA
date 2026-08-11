@@ -1,6 +1,9 @@
 <?php
 // config/config.php
 
+// Application Version 
+define('APP_VERSION', '0.3.0');
+
 // 1. Monitoraggio errori (tienilo attivo in sviluppo, disattivalo in produzione!)
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
