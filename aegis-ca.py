@@ -6,14 +6,22 @@ import mysql.connector
 import bcrypt
 from tabulate import tabulate
 
-# --- CONFIGURAZIONE ---
-VERSION = "3.1.29"
+# Per leggere le vere date e CN dai certificati X.509
+try:
+    from cryptography import x509
+    from cryptography.hazmat.backends import default_backend
+    HAS_CRYPTO = True
+except ImportError:
+    HAS_CRYPTO = False
+
+# --- CONFIGURAZIONE DINAMICA VIA ENVIRONMENT ---
+VERSION = "3.1.30"
 DB_CONFIG = {
-    "user": "lorenzo",
-    "password": "qss-s3E-IH9_Khz",
-    "database": "aegis_ca",
-    "host": "127.0.0.1",
-    "port": 3306
+    "user": os.getenv("DB_USER", "athena"),
+    "password": os.getenv("DB_PASS", "goat-snake-gorgon"),
+    "database": os.getenv("DB_NAME", "aegis_ca"),
+    "host": os.getenv("DB_HOST", "127.0.0.1"),
+    "port": int(os.getenv("DB_PORT", 3306))
 }
 
 # --- UI & COLORI INTERFACCIA ---
@@ -34,7 +42,6 @@ class UI:
 
 # --- FORMATTER PER HELP COLORATO ---
 class ColorHelpFormatter(argparse.RawTextHelpFormatter):
-    """Sottoclasse personalizzata per applicare i colori ANSI all'output di argparse --help"""
     def _format_action(self, action):
         parts = super()._format_action(action)
         if action.option_strings:
@@ -55,15 +62,18 @@ class ColorHelpFormatter(argparse.RawTextHelpFormatter):
 class AegisDB:
     def __init__(self):
         self.conn = None
-        socket_paths = ['/var/run/mysqld/mysqld.sock', '/var/lib/mysql/mysql.sock', '/tmp/mysql.sock']
+        socket_paths = ['/var/run/mysqld/mysqld.sock', '/var/lib/mysql/mysql.sock', '/tmp/mysql.sock', '/run/mysqld/mysqld.sock']
         
+        # Prova prima via socket locale
         for sock in socket_paths:
             if os.path.exists(sock):
                 try:
                     self.conn = mysql.connector.connect(unix_socket=sock, **{k:v for k,v in DB_CONFIG.items() if k != 'host'})
                     return
-                except mysql.connector.Error: continue
+                except mysql.connector.Error: 
+                    continue
         
+        # In alternativa prova via TCP/IP
         try:
             self.conn = mysql.connector.connect(**DB_CONFIG)
         except mysql.connector.Error as e:
@@ -78,7 +88,31 @@ class AegisDB:
         cursor.close()
         return result
 
-    def close(self): self.conn.close()
+    def close(self): 
+        if self.conn and self.conn.is_connected():
+            self.conn.close()
+
+# --- HELPER PER PARSING CERTIFICATI ---
+def parse_cert_info(cert_pem):
+    """Estrae Common Name e date di validità dal PEM del certificato."""
+    if not HAS_CRYPTO:
+        return None, None, None
+    try:
+        cert = x509.load_pem_x509_certificate(cert_pem.encode(), default_backend())
+        cn_attributes = cert.subject.get_attributes_for_oid(x509.NameOID.COMMON_NAME)
+        cn = cn_attributes[0].value if cn_attributes else "Unknown"
+        
+        # Gestione compatibilità datetime (cryptography >= 42.0 usa naive UTC)
+        try:
+            valid_from = cert.not_valid_before_utc
+            valid_to = cert.not_valid_after_utc
+        except AttributeError:
+            valid_from = cert.not_valid_before
+            valid_to = cert.not_valid_after
+
+        return cn, valid_from, valid_to
+    except Exception:
+        return None, None, None
 
 # --- LOGICA DEI COMANDI ---
 class UserManager:
@@ -125,28 +159,25 @@ class UserManager:
 class CertManager:
     @staticmethod
     def run(db, args):
-        # AZIONE: LIST
         if args.action == 'list':
             if not args.type:
                 UI.error("Specificare il tipo con -t [ca|cert]")
                 return
             table = "cas" if args.type == 'ca' else "certificates"
-            rows = db.execute(f"SELECT id, common_name, valid_from, valid_to FROM {table}")
+            rows = db.execute(f"SELECT id, common_name, valid_from, valid_to FROM `{table}`")
             UI.header(f"Elenco {table.upper()}")
             print(tabulate([[r['id'], r['common_name'], r['valid_from'], r['valid_to']] for r in rows], 
                            headers=["ID", "Common Name", "Valido Dal", "Valido Al"], tablefmt="simple"))
 
-        # AGGIORNATO: SUPPORTO WILDCARD E IMPORT MULTIPLO
         elif args.action == 'import':
             if not args.file or not args.type:
                 UI.error("Specificare il nome base o wildcard con -f e il tipo con -t [ca|cert]")
                 return
             
-            # Ricava i nomi "base" rimuovendo .crt e .key, usando un set per evitare duplicati
             base_names = set()
             for filepath in args.file:
                 if os.path.isdir(filepath):
-                    continue # Salta le cartelle se passate per errore
+                    continue
                 
                 if filepath.endswith('.crt') or filepath.endswith('.key'):
                     base_names.add(filepath[:-4])
@@ -160,33 +191,48 @@ class CertManager:
             for base_name in base_names:
                 crt_path = f"{base_name}.crt"
                 key_path = f"{base_name}.key"
-
-                common_name = os.path.basename(base_name)
+                fallback_cn = os.path.basename(base_name)
 
                 if not os.path.exists(crt_path) or not os.path.exists(key_path):
-                    UI.error(f"Coppia incompleta per '{common_name}'. Trovati entrambi? ({crt_path}, {key_path})")
+                    UI.error(f"Coppia incompleta per '{fallback_cn}'. Assicurati che entrambi i file ({crt_path}, {key_path}) esistano.")
                     continue
                 
                 with open(crt_path, 'r') as f_crt: cert_content = f_crt.read()
                 with open(key_path, 'r') as f_key: key_content = f_key.read()
 
+                # Tenta l'estrazione delle informazioni reali dal certificato
+                parsed_cn, valid_from, valid_to = parse_cert_info(cert_content)
+                common_name = parsed_cn if parsed_cn else fallback_cn
+
                 try:
                     if args.type == 'ca':
-                        db.execute("""
-                            INSERT INTO cas (common_name, subject_country, subject_state, subject_locality, subject_organization, subject_org_unit, cert_data, key_data, key_bits, valid_from, valid_to) 
-                            VALUES (%s, 'IT', 'RM', 'Roma', 'Aegis', 'CA', %s, %s, 2048, NOW(), NOW() + INTERVAL 1 YEAR)
-                        """, (common_name, cert_content, key_content))
+                        if valid_from and valid_to:
+                            db.execute("""
+                                INSERT INTO cas (common_name, subject_country, subject_state, subject_locality, subject_organization, subject_org_unit, cert_data, key_data, key_bits, valid_from, valid_to) 
+                                VALUES (%s, 'IT', 'RM', 'Roma', 'Aegis', 'CA', %s, %s, 2048, %s, %s)
+                            """, (common_name, cert_content, key_content, valid_from, valid_to))
+                        else:
+                            db.execute("""
+                                INSERT INTO cas (common_name, subject_country, subject_state, subject_locality, subject_organization, subject_org_unit, cert_data, key_data, key_bits, valid_from, valid_to) 
+                                VALUES (%s, 'IT', 'RM', 'Roma', 'Aegis', 'CA', %s, %s, 2048, NOW(), NOW() + INTERVAL 1 YEAR)
+                            """, (common_name, cert_content, key_content))
                         UI.success(f"CA '{common_name}' importata con successo.")
                     else:
-                        db.execute("""
-                            INSERT INTO certificates (ca_id, common_name, subject_country, subject_state, subject_locality, subject_organization, subject_org_unit, cert_data, key_data, key_bits, valid_from, valid_to) 
-                            VALUES (1, %s, 'IT', 'RM', 'Roma', 'Aegis', 'Node', %s, %s, 2048, NOW(), NOW() + INTERVAL 1 YEAR)
-                        """, (common_name, cert_content, key_content))
+                        ca_id = args.ca_id if hasattr(args, 'ca_id') and args.ca_id else 1
+                        if valid_from and valid_to:
+                            db.execute("""
+                                INSERT INTO certificates (ca_id, common_name, subject_country, subject_state, subject_locality, subject_organization, subject_org_unit, cert_data, key_data, key_bits, valid_from, valid_to) 
+                                VALUES (%s, %s, 'IT', 'RM', 'Roma', 'Aegis', 'Node', %s, %s, 2048, %s, %s)
+                            """, (ca_id, common_name, cert_content, key_content, valid_from, valid_to))
+                        else:
+                            db.execute("""
+                                INSERT INTO certificates (ca_id, common_name, subject_country, subject_state, subject_locality, subject_organization, subject_org_unit, cert_data, key_data, key_bits, valid_from, valid_to) 
+                                VALUES (%s, %s, 'IT', 'RM', 'Roma', 'Aegis', 'Node', %s, %s, 2048, NOW(), NOW() + INTERVAL 1 YEAR)
+                            """, (ca_id, common_name, cert_content, key_content))
                         UI.success(f"Certificato '{common_name}' importato con successo.")
                 except mysql.connector.Error as e:
                     UI.error(f"Errore DB durante l'importazione di '{common_name}': {e}")
 
-        # AGGIORNATO: ESPORTA ENTRAMBI I FILE (.crt e .key)
         elif args.action == 'export':
             if not args.type:
                 UI.error("Specificare il tipo con -t [ca|cert]")
@@ -194,7 +240,7 @@ class CertManager:
             
             table = "cas" if args.type == 'ca' else "certificates"
             
-            query = f"SELECT common_name, cert_data, key_data FROM {table}"
+            query = f"SELECT common_name, cert_data, key_data FROM `{table}`"
             params = ()
 
             if args.cn and args.cn.lower() != 'all':
@@ -261,6 +307,7 @@ def main():
     p_cert.add_argument('action', choices=['list', 'import', 'export'], help="Azione sui file crittografici")
     p_cert.add_argument('-t', '--type', choices=['ca', 'cert'], help="Specifica se l'operazione è su una CA o su un certificato foglia")
     p_cert.add_argument('-f', '--file', nargs='+', metavar='PATH', help="Nome base del file o wildcard (es. cartella/*)")
+    p_cert.add_argument('--ca-id', type=int, default=1, help="ID della CA associata (richiesto solo se type=cert, default: 1)")
     p_cert.add_argument('--cn', metavar='NAME', help="Common Name (CN) specifico da esportare. Omettere o usare 'all' per esportazione di massa")
     p_cert.set_defaults(handler=CertManager)
 

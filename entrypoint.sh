@@ -1,20 +1,33 @@
-#!/bin/bash
+#!/bin/sh
 set -e
 
 # ==========================================
-# Configurazione del Timezone (Fuso Orario)
+# Configurazione Valori Default DB
 # ==========================================
-if [ ! -z "$TZ" ]; then
+DB_NAME="${DB_NAME:-aegis_ca}"
+DB_USER="${DB_USER:-athena}"
+DB_PASS="${DB_PASS:-goat-snake-gorgon}"
+
+# ==========================================
+# Configurazione del Timezone
+# ==========================================
+if [ -n "$TZ" ]; then
     echo "[INFO] Configurazione del fuso orario su: $TZ"
-    
-    # Configura il fuso orario a livello di sistema operativo (Alpine)
-    cp /usr/share/zoneinfo/$TZ /etc/localtime
-    echo "$TZ" > /etc/timezone
-    
-    # Forza il fuso orario in PHP creando un file di configurazione prioritario
-    mkdir -p /etc/php83/conf.d
-    echo "date.timezone = \"$TZ\"" > /etc/php83/conf.d/99_timezone.ini
+    if [ -f "/usr/share/zoneinfo/$TZ" ]; then
+        cp "/usr/share/zoneinfo/$TZ" /etc/localtime
+        echo "$TZ" > /etc/timezone
+        
+        PHP_INI_DIR="/etc/php83/conf.d"
+        [ ! -d "$PHP_INI_DIR" ] && PHP_INI_DIR="/etc/php8/conf.d"
+        
+        mkdir -p "$PHP_INI_DIR"
+        echo "date.timezone = \"$TZ\"" > "$PHP_INI_DIR/99_timezone.ini"
+    fi
 fi
+
+# Assicura le directory necessarie e i permessi corretti per MariaDB
+mkdir -p /run/mysqld /data
+chown -R mysql:mysql /run/mysqld /data
 
 # ==========================================
 # 1. Inizializza MariaDB se la cartella è vuota
@@ -23,44 +36,70 @@ if [ ! -d "/data/mysql" ]; then
     echo "[INFO] Prima esecuzione: Inizializzazione di MariaDB in /data..."
     mysql_install_db --user=mysql --datadir=/data > /dev/null
 
-    # Avvia temporaneamente MariaDB in background per la configurazione iniziale
+    # Avvia temporaneamente MariaDB in background per l'inizializzazione
     mysqld_safe --user=mysql --datadir=/data &
     pid="$!"
     
-    # Attendi che il database sia effettivamente pronto
-    until mysqladmin ping &>/dev/null; do
+    # Attendi che il database sia pronto
+    RETRIES=30
+    until mysqladmin ping --silent || [ $RETRIES -eq 0 ]; do
         sleep 1
+        RETRIES=$((RETRIES - 1))
     done
 
-    # ==========================================
-    # 2. Importa il database
-    # ==========================================
-    # Controlla prima in /tmp (Best Practice con i Volumi Docker)
-    if [ -f "/tmp/db.sql" ]; then
-        echo "[INFO] Importazione del file db.sql da /tmp..."
-        mysql < /tmp/db.sql
-        echo "[INFO] Importazione completata."
-    elif [ -f "/data/db.sql" ]; then
-        echo "[INFO] Importazione del file db.sql da /data..."
-        mysql < /data/db.sql
-        echo "[INFO] Importazione completata."
-    else
-        echo "[WARN] Nessun file db.sql trovato, salto l'importazione."
+    if [ $RETRIES -eq 0 ]; then
+        echo "[ERROR] Impossibile avviare MariaDB durante l'inizializzazione!"
+        exit 1
     fi
 
-    # Spegne il MariaDB temporaneo per poterlo riavviare pulito
+    # ==========================================
+    # 2. Importa lo Schema SQL
+    # ==========================================
+    if [ -f "/tmp/db.sql" ]; then
+        echo "[INFO] Importazione dello schema db.sql da /tmp..."
+        mysql < /tmp/db.sql
+    elif [ -f "/data/db.sql" ]; then
+        echo "[INFO] Importazione dello schema db.sql da /data..."
+        mysql < /data/db.sql
+    else
+        echo "[WARN] Nessun file db.sql trovato, creo solo il database VUOTO."
+        mysql -e "CREATE DATABASE IF NOT EXISTS \`$DB_NAME\` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+    fi
+
+    # ==========================================
+    # 3. Creazione dinamica di Utente e Privilegi
+    # ==========================================
+    echo "[INFO] Creazione utente DB '$DB_USER' e assegnazione privilegi sul DB '$DB_NAME'..."
+    mysql -e "
+        CREATE DATABASE IF NOT EXISTS \`$DB_NAME\` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+        CREATE USER IF NOT EXISTS '$DB_USER'@'localhost' IDENTIFIED BY '$DB_PASS';
+        CREATE USER IF NOT EXISTS '$DB_USER'@'127.0.0.1' IDENTIFIED BY '$DB_PASS';
+        GRANT ALL PRIVILEGES ON \`$DB_NAME\`.* TO '$DB_USER'@'localhost';
+        GRANT ALL PRIVILEGES ON \`$DB_NAME\`.* TO '$DB_USER'@'127.0.0.1';
+        FLUSH PRIVILEGES;
+    "
+
+    echo "[INFO] Inizializzazione DB completata con successo."
+
+    # Spegne il MariaDB temporaneo
     mysqladmin -u root shutdown
     wait "$pid"
 fi
 
 # ==========================================
-# 3. Avvia MariaDB definitivo in background
+# 4. Avvia MariaDB definitivo in background
 # ==========================================
 echo "[INFO] Avvio di MariaDB..."
 mysqld_safe --user=mysql --datadir=/data &
 
+RETRIES=15
+until mysqladmin ping --silent || [ $RETRIES -eq 0 ]; do
+    sleep 1
+    RETRIES=$((RETRIES - 1))
+done
+
 # ==========================================
-# 4. Avvia Apache in primo piano (Foreground)
+# 5. Avvia Apache in primo piano
 # ==========================================
-echo "[INFO] Avvio di Apache..."
+echo "[INFO] Avvio di Apache web server..."
 exec httpd -D FOREGROUND

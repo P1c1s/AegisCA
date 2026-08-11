@@ -151,6 +151,8 @@ Download the [docker-compose.yml](https://github.com/P1c1s/AegisCA/blob/main/doc
 docker compose up -d
 ```
 
+> **Important:** For security reasons, it is highly recommended to customize the default database credentials (DB_USER, DB_PASS) before starting the service. Define your custom credentials directly inside the environment section of your docker-compose.yml file.
+
 ## First Configuration
 
 Once the container is up and running:

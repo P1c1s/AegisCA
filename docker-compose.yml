@@ -6,6 +6,9 @@ services:
     restart: always
     environment:
       - TZ=Europe/Rome
+      - DB_NAME=aegis_ca
+      - DB_USER=admin
+      - DB_PASS=your_srecret!
     ports:
       - "8080:80"
     volumes:

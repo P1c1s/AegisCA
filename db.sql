@@ -1,10 +1,13 @@
--- Creazione dell'utente MySQL e assegnazione dei privilegi sul nuovo DB
-CREATE USER IF NOT EXISTS 'lorenzo'@'localhost' IDENTIFIED BY 'qss-s3E-IH9_Khz';
+-- -- Creazione dell'utente MySQL e assegnazione dei privilegi sul nuovo DB
+-- CREATE USER IF NOT EXISTS 'lorenzo'@'localhost' IDENTIFIED BY 'qss-s3E-IH9_Khz';
 
--- Database rinominato in aegis_ca
+-- -- Database rinominato in aegis_ca
+-- CREATE DATABASE IF NOT EXISTS `aegis_ca` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+-- GRANT ALL PRIVILEGES ON `aegis_ca`.* TO 'lorenzo'@'localhost';
+-- FLUSH PRIVILEGES;
+
+-- Creazione DB
 CREATE DATABASE IF NOT EXISTS `aegis_ca` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-GRANT ALL PRIVILEGES ON `aegis_ca`.* TO 'lorenzo'@'localhost';
-FLUSH PRIVILEGES;
 
 USE `aegis_ca`;
 

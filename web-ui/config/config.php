@@ -7,12 +7,14 @@ ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
 // 2. Credenziali Database
-define('DB_HOST', 'localhost');
-define('DB_USER', 'lorenzo');
-define('DB_PASS', 'qss-s3E-IH9_Khz');
-define('DB_NAME', 'aegis_ca');
+define('DB_HOST', getenv('DB_HOST') ?: 'localhost');
+define('DB_USER', getenv('DB_USER') ?: 'athena');
+define('DB_PASS', getenv('DB_PASS') ?: 'goat-snake-gorgon');
+define('DB_NAME', getenv('DB_NAME') ?: 'aegis_ca');
 
-// 3. Percorsi globali aggiornati e dinamici
+
+
+// 3. Percorsi globali
 if (!defined('ROOT_PATH')) {
     define('ROOT_PATH', dirname(__DIR__) . '/');
 }
@@ -35,7 +37,8 @@ try {
         PDO::ATTR_EMULATE_PREPARES => false,
     ]);
 } catch (PDOException $e) {
-    die("Errore critico di connessione al database."); 
+    // Sostituisci temporaneamente la riga con questa per vedere il dettaglio:
+    die("Errore dettagliato DB: " . $e->getMessage()); 
 }
 
 // 5. Inizializzazione Sessione e Impostazioni di Sicurezza Cookie
