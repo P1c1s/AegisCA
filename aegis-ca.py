@@ -5,6 +5,7 @@ import os
 import mysql.connector
 import bcrypt
 from tabulate import tabulate
+from pathlib import Path
 
 # Per leggere le vere date e CN dai certificati X.509
 try:
@@ -14,8 +15,20 @@ try:
 except ImportError:
     HAS_CRYPTO = False
 
+# Percorso assoluto per l'ambiente Docker/produzione
+ABS_VERSION_FILE = Path("/var/www/localhost/htdocs/config/VERSION")
+
+# Percorso relativo di fallback per lo sviluppo locale
+LOCAL_VERSION_FILE = Path(__file__).resolve().parent.parent / "VERSION"
+
+if ABS_VERSION_FILE.exists():
+    APP_VERSION = ABS_VERSION_FILE.read_text().strip()
+elif LOCAL_VERSION_FILE.exists():
+    APP_VERSION = LOCAL_VERSION_FILE.read_text().strip()
+else:
+    APP_VERSION = "30.03.2021"
+
 # --- CONFIGURAZIONE DINAMICA VIA ENVIRONMENT ---
-VERSION = "3.1.30"
 DB_CONFIG = {
     "user": os.getenv("DB_USER", "athena"),
     "password": os.getenv("DB_PASS", "goat-snake-gorgon"),
@@ -289,7 +302,7 @@ def main():
 
     parser.add_argument("-h", "--help", action="help", help="show this help message and exit")
     parser.add_argument("-v", "--verbose", action="store_true", help="set verbosity level")
-    parser.add_argument("-V", "--version", action="version", version=f"%(prog)s {VERSION}", help="show version")
+    parser.add_argument("-V", "--version", action="version", version=f"%(prog)s {APP_VERSION}", help="show version")
 
     sub = parser.add_subparsers(dest="command", metavar="COMMAND")
 

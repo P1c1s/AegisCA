@@ -1,8 +1,11 @@
 <?php
 // config/config.php
 
-// Application Version 
-define('APP_VERSION', '0.3.0');
+// Legge la versione dal file VERSION nella radice del progetto
+echo "<h1>".__DIR__."../</h1>";
+$version_file = __DIR__ . '/VERSION';
+define('APP_VERSION', file_exists($version_file) ? trim(file_get_contents($version_file)) : '0.0.0');
+
 
 // 1. Monitoraggio errori (tienilo attivo in sviluppo, disattivalo in produzione!)
 ini_set('display_errors', 1);
