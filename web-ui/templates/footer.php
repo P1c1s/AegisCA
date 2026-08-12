@@ -50,8 +50,7 @@ $hasUpdate = version_compare($latestVersion, APP_VERSION, '>');
         </p>
         
         <p class="version">
-            v<?php echo APP_VERSION; ?> &bull; Licenza MIT
-            <?php if ($hasUpdate): ?>
+            <a href="https://github.com/P1c1s/AegisCA/releases/tag/v<?php echo APP_VERSION; ?>" target="_blank" rel="noopener">v<?php echo APP_VERSION; ?></a> &bull; Licenza MIT            <?php if ($hasUpdate): ?>
                 &bull; <a href="https://github.com/P1c1s/AegisCA/releases/latest" target="_blank" rel="noopener" class="update-badge">
                     <i class="fa-solid fa-circle-arrow-up"></i> Nuova versione disponibile (v<?php echo htmlspecialchars($latestVersion); ?>)
                 </a>
