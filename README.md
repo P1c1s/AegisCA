@@ -138,6 +138,9 @@ docker run -d \
   --hostname aegis-ca \
   --restart always \
   -e TZ=Europe/Rome \
+  -e DB_NAME=aegis_ca \
+  -e DB_USER=admin \
+  -e DB_PASS='your_secret!' \
   -p 8080:80 \
   -v aegis-ca_data:/data \
   ghcr.io/p1c1s/aegis-ca:latest
