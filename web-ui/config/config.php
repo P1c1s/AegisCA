@@ -2,7 +2,6 @@
 // config/config.php
 
 // Legge la versione dal file VERSION nella radice del progetto
-echo "<h1>".__DIR__."../</h1>";
 $version_file = __DIR__ . '/VERSION';
 define('APP_VERSION', file_exists($version_file) ? trim(file_get_contents($version_file)) : '0.0.0');
 
