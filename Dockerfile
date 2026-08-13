@@ -1,5 +1,12 @@
 FROM alpine:3.19
 
+# Metadati
+LABEL org.opencontainers.image.title="Aegis CA"
+LABEL org.opencontainers.image.description="Aegis CA is a lightweight, secure, and completely self-contained web application for creating, signing, and managing a Local Certificate Authority (CA) and its corresponding self-signed SSL/TLS certificates."
+LABEL org.opencontainers.image.source="https://github.com/p1c1s/aegis-ca"
+LABEL org.opencontainers.image.licenses="Apache-2.0"
+LABEL org.opencontainers.image.authors="p1c1s"
+
 # 1. Aggiorna i pacchetti e installa Apache, PHP, MariaDB, Python e i compilatori necessari
 RUN apk update && apk add --no-cache \
     apache2 \
