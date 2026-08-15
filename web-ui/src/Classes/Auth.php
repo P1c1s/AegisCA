@@ -16,7 +16,7 @@ class Auth {
         return false;
     }
 
-    public static function register($username, $password) {
+    public static function signup($username, $password) {
         global $pdo;
         $hashedPassword = password_hash($password, PASSWORD_BCRYPT);
         try {

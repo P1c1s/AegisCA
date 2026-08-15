@@ -10,7 +10,7 @@ class PageController {
         'profile'      => ['file' => 'src/Pages/profile.php',      'auth_required' => true,  'has_layout' => true],
         'import'       => ['file' => 'src/Pages/import.php',       'auth_required' => true,  'has_layout' => true],
         'login'        => ['file' => 'src/Pages/login.php',        'auth_required' => false, 'has_layout' => true],
-        'register'     => ['file' => 'src/Pages/register.php',     'auth_required' => false, 'has_layout' => true],
+        'signup'       => ['file' => 'src/Pages/signup.php',       'auth_required' => false, 'has_layout' => true],
         
         // Pagina di Errore 404
         '404'          => ['file' => 'src/Pages/404.php',          'auth_required' => false, 'has_layout' => true],

@@ -1,5 +1,5 @@
 <?php
-// src/Pages/register.php
+// src/Pages/signup.php
 // Nota: Auth, $pdo e il layout sono gestiti centralmente dal PageController.
 
 $msg = ''; 
@@ -15,7 +15,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $password = $_POST['password'] ?? '';
 
         if (!empty($username) && !empty($password)) {
-            if (Auth::register($username, $password)) {
+            if (Auth::signup($username, $password)) {
                 $msg = 'Registrazione completata. Puoi effettuare il login.'; 
                 $type = 'success';
             } else {
