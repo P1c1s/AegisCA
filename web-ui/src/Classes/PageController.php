@@ -48,8 +48,8 @@ class PageController {
             exit;
         }
 
-        // Impediamo l'accesso a login e register se l'utente è già autenticato
-        if (!$pageConfig['auth_required'] && Auth::isLoggedIn() && ($page === 'login' || $page === 'register')) {
+        // Impediamo l'accesso a login e signup se l'utente è già autenticato
+        if (!$pageConfig['auth_required'] && Auth::isLoggedIn() && ($page === 'login' || $page === 'signup')) {
             header('Location: index.php?page=dashboard');
             exit;
         }
