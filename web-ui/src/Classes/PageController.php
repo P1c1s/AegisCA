@@ -63,9 +63,9 @@ class PageController {
             // 5. Rendering del Layout completo
             require_once ROOT_PATH . 'templates/head.php';
 
-            // Mostra la topbar a qualsiasi utente loggato (anche su 404)
+            // Mostra la nav a qualsiasi utente loggato (anche su 404)
             if (Auth::isLoggedIn()) {
-                require_once ROOT_PATH . 'templates/topbar.php';
+                require_once ROOT_PATH . 'templates/nav.php';
             }
 
             // Mostra il footer a qualsiasi utente loggato (anche su 404)

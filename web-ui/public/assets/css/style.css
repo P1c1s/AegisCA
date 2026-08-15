@@ -13,73 +13,76 @@
     --danger: #ef4444;
 }
 
-* { 
-    box-sizing: border-box; 
-    margin: 0; 
-    padding: 0; 
-    font-family: 'Segoe UI', system-ui, sans-serif; 
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: 'Segoe UI', system-ui, sans-serif;
 }
 
-body { 
-    background-color: var(--bg-dark); 
-    color: var(--text-main); 
-    padding-top: 70px; 
+body {
+    background-color: var(--bg-dark);
+    color: var(--text-main);
+    padding-top: 70px;
 }
 
-h2, h3 { 
-    font-weight: 600; 
-    margin-bottom: 1.2rem; 
+h2,
+h3 {
+    font-weight: 600;
+    margin-bottom: 1.2rem;
 }
 
 
 /* ==========================================================================
    2. LAYOUT & CONTAINERS (Struttura della Pagina)
    ========================================================================== */
-.container { 
-    max-width: 1400px; 
-    margin: 2rem auto; 
-    padding: 0 1rem; 
+.container {
+    max-width: 1400px;
+    margin: 2rem auto;
+    padding: 0 1rem;
 }
 
-.panel { 
-    background-color: var(--panel-dark); 
-    border: 1px solid var(--border); 
-    border-radius: 8px; 
-    padding: 1.5rem; 
-    margin-bottom: 2rem; 
+.panel {
+    background-color: var(--panel-dark);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
 }
 
 
 /* ==========================================================================
    3. NAVIGATION (Top Bar & Footer & Logo)
    ========================================================================== */
-.top-bar { 
-    position: fixed; 
-    top: 0; 
-    left: 0; 
-    right: 0; 
-    z-index: 1000; 
-    height: 64px; 
-    display: flex; 
-    align-items: center; 
-    justify-content: space-between; 
-    padding: 0 2rem; 
-    background-color: var(--panel-dark); 
+.nav {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 2rem;
+    background-color: var(--panel-dark);
     border-bottom: 1px solid var(--border);
 }
 
-.footer { 
-    position: fixed; 
-    bottom: 0; 
-    left: 0; 
-    right: 0; 
-    z-index: 1000; 
-    min-height: 56px; 
-    background-color: var(--panel-dark); 
-    border-top: 1px solid var(--border); 
+.footer {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+    min-height: 56px;
+    background-color: var(--panel-dark);
+    border-top: 1px solid var(--border);
     display: flex;
-    align-items: center;            /* Centra verticalmente (asse Y) */
-    justify-content: space-between; /* Mantiene Logo a sx e Link a dx */
+    align-items: center;
+    /* Centra verticalmente (asse Y) */
+    justify-content: space-between;
+    /* Mantiene Logo a sx e Link a dx */
     padding: 0.5rem 2rem;
 }
 
@@ -88,17 +91,20 @@ h2, h3 {
     position: absolute;
     left: 50%;
     top: 50%;
-    transform: translate(-50%, -50%); /* Centra perfettamente su X e Y */
-    
+    transform: translate(-50%, -50%);
+    /* Centra perfettamente su X e Y */
+
     font-size: 0.8rem;
     color: var(--text-muted, #888);
     line-height: 1.3;
-    
+
     display: flex;
     flex-direction: column;
-    align-items: center;            /* Centra il testo interno */
+    align-items: center;
+    /* Centra il testo interno */
     text-align: center;
-    pointer-events: auto;           /* Mantiene i link cliccabili */
+    pointer-events: auto;
+    /* Mantiene i link cliccabili */
 }
 
 .footer-meta p {
@@ -117,7 +123,8 @@ h2, h3 {
 }
 
 .footer-meta .update-badge {
-    color: #28a745; /* Verde per far risaltare l'aggiornamento */
+    color: #28a745;
+    /* Verde per far risaltare l'aggiornamento */
     font-weight: bold;
     text-decoration: none;
     margin-left: 4px;
@@ -128,120 +135,123 @@ h2, h3 {
 }
 
 .logo {
-    display: inline-flex;  
-    align-items: center;   
-    gap: 12px;             
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
     font-size: 24px;
     font-weight: bold;
     color: #ffffff;
-    white-space: nowrap;   
+    white-space: nowrap;
 }
 
 .logo-img {
     display: inline-block;
     vertical-align: middle;
-    height: 46px;          
-    width: auto;           
+    height: 46px;
+    width: auto;
 }
 
-.nav-links a { 
+.nav-links a {
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    color: var(--text-main); 
-    text-decoration: none; 
-    margin-left: 1.5rem; 
-    font-size: 0.95rem; 
-    transition: color 0.2s; 
+    color: var(--text-main);
+    text-decoration: none;
+    margin-left: 1.5rem;
+    font-size: 0.95rem;
+    transition: color 0.2s;
 }
 
 .nav-links a i {
     font-size: 1.05rem;
 }
 
-.nav-links a:hover { 
-    color: var(--accent); 
+.nav-links a:hover {
+    color: var(--accent);
 }
 
-.nav-links a.logout { 
-    color: var(--danger); 
+.nav-links a.logout {
+    color: var(--danger);
 }
 
 
 /* ==========================================================================
    4. FORMS & CONTROLS (Input e Campi di Testo)
    ========================================================================== */
-.form-grid { 
-    display: grid; 
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); 
-    gap: 1rem; 
-    margin-bottom: 1rem; 
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1rem;
 }
 
-.form-group { 
-    display: flex; 
-    flex-direction: column; 
+.form-group {
+    display: flex;
+    flex-direction: column;
 }
 
-.form-group.full-width { 
-    grid-column: 1 / -1; 
+.form-group.full-width {
+    grid-column: 1 / -1;
 }
 
-label { 
-    font-size: 0.85rem; 
-    color: var(--text-muted); 
-    margin-bottom: 0.25rem; 
+label {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    margin-bottom: 0.25rem;
 }
 
-input, select, textarea { 
+input,
+select,
+textarea {
     width: 100%;
-    padding: 0.6rem; 
-    font-size: 0.95rem; 
-    color: var(--text-main); 
-    background-color: var(--bg-dark); 
-    border: 1px solid var(--border); 
-    border-radius: 4px; 
+    padding: 0.6rem;
+    font-size: 0.95rem;
+    color: var(--text-main);
+    background-color: var(--bg-dark);
+    border: 1px solid var(--border);
+    border-radius: 4px;
 }
 
-input:focus, select:focus { 
-    border-color: var(--accent); 
-    outline: none; 
+input:focus,
+select:focus {
+    border-color: var(--accent);
+    outline: none;
 }
 
 
 /* ==========================================================================
    5. BUTTONS (Pulsanti e Interazioni)
    ========================================================================== */
-.btn { 
-    display: inline-flex; 
-    align-items: center; 
-    justify-content: center; 
-    padding: 0.6rem 1.2rem; 
-    font-size: 0.9rem; 
-    color: white; 
-    text-decoration: none; 
-    background-color: var(--accent); 
-    border: none; 
-    border-radius: 4px; 
-    cursor: pointer; 
-    transition: background 0.2s; 
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.6rem 1.2rem;
+    font-size: 0.9rem;
+    color: white;
+    text-decoration: none;
+    background-color: var(--accent);
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.2s;
 }
 
-.btn:hover { 
-    background-color: var(--accent-hover); 
+.btn:hover {
+    background-color: var(--accent-hover);
 }
 
-.btn-danger { 
-    background-color: var(--danger); 
+.btn-danger {
+    background-color: var(--danger);
 }
 
-.btn-danger:hover { 
-    background-color: #dc2626; 
+.btn-danger:hover {
+    background-color: #dc2626;
 }
 
-.btn-sm { 
-    padding: 0.3rem 0.6rem; 
-    font-size: 0.8rem; 
+.btn-sm {
+    padding: 0.3rem 0.6rem;
+    font-size: 0.8rem;
     margin-right: 0.3rem;
 }
 
@@ -249,25 +259,26 @@ input:focus, select:focus {
 /* ==========================================================================
    6. TABLES & DATA (Visualizzazione Dati)
    ========================================================================== */
-table { 
-    width: 100%; 
-    border-collapse: collapse; 
-    margin-top: 1rem; 
-    text-align: left; 
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 1rem;
+    text-align: left;
 }
 
-th, td { 
-    padding: 0.75rem; 
-    font-size: 1rem; 
-    border-bottom: 1px solid var(--border); 
+th,
+td {
+    padding: 0.75rem;
+    font-size: 1rem;
+    border-bottom: 1px solid var(--border);
 }
 
-th { 
-    color: var(--text-muted); 
-    font-weight: 600; 
+th {
+    color: var(--text-muted);
+    font-weight: 600;
 }
 
-td a{
+td a {
     text-decoration: none;
     color: white !important;
 }
@@ -276,42 +287,42 @@ td a{
    7. COMPONENTS (Badge e Alert Box)
    ========================================================================== */
 /* Badges */
-.badge { 
-    display: inline-block; 
-    padding: 0.2rem 0.5rem; 
-    font-size: 0.75rem; 
-    font-weight: 600; 
-    border-radius: 4px; 
+.badge {
+    display: inline-block;
+    padding: 0.2rem 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    border-radius: 4px;
 }
 
-.badge-success { 
-    color: var(--success); 
-    background-color: rgba(16, 185, 129, 0.2); 
+.badge-success {
+    color: var(--success);
+    background-color: rgba(16, 185, 129, 0.2);
 }
 
-.badge-danger { 
-    color: var(--danger); 
-    background-color: rgba(239, 68, 68, 0.2); 
+.badge-danger {
+    color: var(--danger);
+    background-color: rgba(239, 68, 68, 0.2);
 }
 
 /* Alert Boxes */
-.alert { 
-    padding: 0.75rem; 
-    font-size: 0.9rem; 
-    margin-bottom: 1rem; 
-    border-radius: 4px; 
+.alert {
+    padding: 0.75rem;
+    font-size: 0.9rem;
+    margin-bottom: 1rem;
+    border-radius: 4px;
 }
 
-.alert-success { 
-    color: var(--success); 
-    background-color: rgba(16, 185, 129, 0.15); 
-    border: 1px solid var(--success); 
+.alert-success {
+    color: var(--success);
+    background-color: rgba(16, 185, 129, 0.15);
+    border: 1px solid var(--success);
 }
 
-.alert-danger { 
-    color: var(--danger); 
-    background-color: rgba(239, 68, 68, 0.15); 
-    border: 1px solid var(--danger); 
+.alert-danger {
+    color: var(--danger);
+    background-color: rgba(239, 68, 68, 0.15);
+    border: 1px solid var(--danger);
 }
 
 
@@ -319,16 +330,17 @@ td a{
    8. PAGES SPECIFIC (Schermata di Login / Registrazione)
    ========================================================================== */
 .login-body {
-    display: flex; 
-    align-items: center; 
-    justify-content: center; 
-    min-height: 100vh; 
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
     padding: 1rem;
 }
 
 /* Nuova regola ad-hoc per supportare l'architettura a controller */
 .login-body-wrapper {
-    margin-top: -70px; /* Annulla il padding superiore del body globale */
+    margin-top: -70px;
+    /* Annulla il padding superiore del body globale */
 }
 
 .login-brand {
@@ -349,10 +361,10 @@ td a{
 /* 📱 TABLET */
 @media (max-width: 900px) {
     body {
-        padding-top: 140px; 
+        padding-top: 140px;
     }
 
-    .top-bar {
+    .nav {
         flex-direction: column;
         height: auto;
         padding: 1rem;
@@ -372,14 +384,14 @@ td a{
 
     .nav-links {
         display: flex;
-        flex-wrap: wrap; 
+        flex-wrap: wrap;
         justify-content: center;
         gap: 1rem;
         width: 100%;
     }
 
     .nav-links a {
-        margin: 0; 
+        margin: 0;
         font-size: 0.9rem;
         white-space: nowrap;
     }
@@ -396,10 +408,10 @@ td a{
 /* 📲 SMARTPHONE */
 @media (max-width: 600px) {
     body {
-        padding-top: 115px; 
+        padding-top: 115px;
     }
 
-    .top-bar {
+    .nav {
         padding: 0.6rem;
         gap: 0.5rem;
     }
@@ -407,7 +419,7 @@ td a{
     .logo span {
         display: none;
     }
-    
+
     .logo {
         justify-content: center;
         gap: 0;
@@ -418,11 +430,11 @@ td a{
     }
 
     .nav-links {
-        gap: 1.2rem; 
+        gap: 1.2rem;
     }
 
     .nav-links a i {
-        font-size: 1.3rem; 
+        font-size: 1.3rem;
     }
 
     .form-grid {
@@ -435,20 +447,21 @@ td a{
     }
 
     .login-brand .logo {
-        font-size: 32px; 
+        font-size: 32px;
     }
 
     .panel {
         padding: 1rem;
-        overflow-x: auto; 
-    }
-    
-    table {
-        margin-top: 0;
-        min-width: 600px; 
+        overflow-x: auto;
     }
 
-    th, td {
+    table {
+        margin-top: 0;
+        min-width: 600px;
+    }
+
+    th,
+    td {
         padding: 0.5rem;
         font-size: 0.85rem;
     }
