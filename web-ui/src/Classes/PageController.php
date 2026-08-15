@@ -4,16 +4,16 @@
 class PageController {
     private $allowedPages = [
         // Pagine standard con interfaccia grafica (HTML)
-        'dashboard'    => ['file' => 'src/Pages/dashboard.php',    'auth_required' => true,  'has_layout' => true],
-        'manage_ca'    => ['file' => 'src/Pages/manage_ca.php',    'auth_required' => true,  'has_layout' => true],
-        'manage_certs' => ['file' => 'src/Pages/manage_certs.php', 'auth_required' => true,  'has_layout' => true],
-        'profile'      => ['file' => 'src/Pages/profile.php',      'auth_required' => true,  'has_layout' => true],
-        'import'       => ['file' => 'src/Pages/import.php',       'auth_required' => true,  'has_layout' => true],
-        'login'        => ['file' => 'src/Pages/login.php',        'auth_required' => false, 'has_layout' => true],
-        'signup'       => ['file' => 'src/Pages/signup.php',       'auth_required' => false, 'has_layout' => true],
+        'dashboard'    => ['file' => 'src/Pages/dashboard.php',    'auth_required' => true,  'has_layout' => true, 'title_key' => 'title_dashboard', 'default_title' => 'Dashboard'],
+        'manage_ca'    => ['file' => 'src/Pages/manage_ca.php',    'auth_required' => true,  'has_layout' => true, 'title_key' => 'title_manage_ca', 'default_title' => 'Manage CA'],
+        'manage_certs' => ['file' => 'src/Pages/manage_certs.php', 'auth_required' => true,  'has_layout' => true, 'title_key' => 'title_manage_certs', 'default_title' => 'Manage Certificates'],
+        'profile'      => ['file' => 'src/Pages/profile.php',      'auth_required' => true,  'has_layout' => true, 'title_key' => 'title_profile', 'default_title' => 'Profile'],
+        'import'       => ['file' => 'src/Pages/import.php',       'auth_required' => true,  'has_layout' => true, 'title_key' => 'title_import', 'default_title' => 'Import'],
+        'login'        => ['file' => 'src/Pages/login.php',        'auth_required' => false, 'has_layout' => true, 'title_key' => 'title_login', 'default_title' => 'Login'],
+        'signup'       => ['file' => 'src/Pages/signup.php',       'auth_required' => false, 'has_layout' => true, 'title_key' => 'title_signup', 'default_title' => 'Sign Up'],
         
         // Pagina di Errore 404
-        '404'          => ['file' => 'src/Pages/404.php',          'auth_required' => false, 'has_layout' => true],
+        '404'          => ['file' => 'src/Pages/404.php',          'auth_required' => false, 'has_layout' => true, 'title_key' => 'title_404', 'default_title' => 'Page Not Found'],
         
         // Azioni pure di backend (Niente HTML, fanno logica e redirect/download)
         'logout'       => ['file' => 'src/Actions/logout.php',     'auth_required' => true,  'has_layout' => false],
@@ -24,7 +24,7 @@ class PageController {
         // 1. Estrazione dinamica della pagina
         $page = $_GET['page'] ?? ($_GET['action'] ?? null);
 
-        // Se non passa da $_GET, ricava il percorso dall'URI richiesto (es. /die -> die)
+        // Se non passa da $_GET, ricava il percorso dall'URI richiesto
         if (!$page) {
             $path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
             $slug = trim($path, '/');
@@ -56,25 +56,27 @@ class PageController {
 
         // 4. Esecuzione del file di Logica/Pagina
         if ($pageConfig['has_layout']) {
+            // Calcola il titolo per la barra del browser
+            $titleText = __('page_' . $page, $pageConfig['default_title']);
+            $pageTitle = $titleText . ' - AegisCA';
+
             ob_start();
             require_once ROOT_PATH . $pageConfig['file'];
             $pageContent = ob_get_clean(); // Cattura l'HTML generato
 
-            // 5. Rendering del Layout completo
+            // 5. Rendering del Layout completo nell'ordine corretto
             require_once ROOT_PATH . 'templates/head.php';
 
-            // Mostra la nav a qualsiasi utente loggato (anche su 404)
             if (Auth::isLoggedIn()) {
                 require_once ROOT_PATH . 'templates/nav.php';
             }
 
-            // Mostra il footer a qualsiasi utente loggato (anche su 404)
+            // Inietta il contenuto della pagina
+            echo $pageContent;
+
             if (Auth::isLoggedIn()) {
                 require_once ROOT_PATH . 'templates/footer.php';
             }
-
-            // Inietta il contenuto catturato prima
-            echo $pageContent;
         } else {
             // Per azioni trasparenti di backend (download, logout)
             require_once ROOT_PATH . $pageConfig['file'];
