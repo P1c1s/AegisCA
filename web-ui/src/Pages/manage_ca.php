@@ -12,12 +12,12 @@ global $pdo;
 // Eliminazione CA (Convertita in POST + Token CSRF per massima sicurezza)
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_ca_id'])) {
     if (!verifyCsrfToken($_POST['csrf_token'] ?? '')) {
-        $msg = 'Richiesta non valida o token CSRF scaduto.';
+        $msg = __('manage_ca_error_csrf_invalid', 'Invalid request or session expired.');
         $type = 'danger';
     } else {
         $stmt = $pdo->prepare("DELETE FROM cas WHERE id = ?");
         if ($stmt->execute([$_POST['delete_ca_id']])) {
-            $msg = 'Certificate Authority rimossa con successo.'; 
+            $msg = __('manage_ca_msg_deleted_success', 'Certificate Authority removed successfully.'); 
             $type = 'success';
         }
     }
@@ -26,7 +26,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_ca_id'])) {
 // Creazione CA
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_ca'])) {
     if (!verifyCsrfToken($_POST['csrf_token'] ?? '')) {
-        $msg = 'Richiesta non valida o token CSRF scaduto.';
+        $msg = __('manage_ca_error_csrf_invalid', 'Invalid request or session expired.');
         $type = 'danger';
     } else {
         $dnData = [
@@ -50,10 +50,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_ca'])) {
         try {
             // Passiamo $keyType e $keySpec alla classe SslEngine
             if (SslEngine::createCA($dnData, intval($_POST['days']), $keyType, $keySpec, $caPassword)) {
-                $msg = 'CA Generata con Successo!'; 
+                $msg = __('manage_ca_msg_created_success', 'CA Generated Successfully!'); 
                 $type = 'success';
             } else {
-                $msg = 'Errore imprevisto durante la generazione della CA.'; 
+                $msg = __('manage_ca_msg_created_error', 'Unexpected error occurred during CA generation.'); 
                 $type = 'danger';
             }
         } catch (Exception $e) {
@@ -72,97 +72,97 @@ $cas = $pdo->query("SELECT * FROM cas ORDER BY created_at DESC")->fetchAll();
     <?php endif; ?>
 
     <div class="panel">
-        <h3>Crea Nuova Local Certificate Authority (Root CA)</h3>
+        <h3><?= __('manage_ca_create_title', 'Create New Local Certificate Authority (Root CA)') ?></h3>
         <form method="POST">
             <!-- Campo Token CSRF -->
             <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(getCsrfToken()) ?>">
 
             <div class="form-grid">
                 <div class="form-group">
-                    <label>Country (C)</label>
-                    <input type="text" name="country" placeholder="IT" minlength="2" maxlength="2" required>
+                    <label><?= __('manage_ca_label_country', 'Country (C)') ?></label>
+                    <input type="text" name="country" placeholder="<?= __('manage_ca_ph_country', 'IT') ?>" minlength="2" maxlength="2" required>
                 </div>
                 <div class="form-group">
-                    <label>State/Province (ST)</label>
-                    <input type="text" name="state" placeholder="Lazio" required>
+                    <label><?= __('manage_ca_label_state', 'State/Province (ST)') ?></label>
+                    <input type="text" name="state" placeholder="<?= __('manage_ca_ph_state', 'Lazio') ?>" required>
                 </div>
                 <div class="form-group">
-                    <label>Locality (L)</label>
-                    <input type="text" name="locality" placeholder="Roma" required>
+                    <label><?= __('manage_ca_label_locality', 'Locality (L)') ?></label>
+                    <input type="text" name="locality" placeholder="<?= __('manage_ca_ph_locality', 'Rome') ?>" required>
                 </div>
                 
                 <div class="form-group">
-                    <label for="key_type">Algoritmo Chiave</label>
+                    <label for="key_type"><?= __('manage_ca_label_key_type', 'Key Algorithm') ?></label>
                     <select name="key_type" id="key_type" required>
-                        <option value="rsa" selected>RSA (Standard, compatibilità globale)</option>
-                        <option value="ecc">ECC (Moderno, ultra-veloce ed efficiente)</option>
+                        <option value="rsa" selected><?= __('manage_ca_option_rsa', 'RSA (Standard, global compatibility)') ?></option>
+                        <option value="ecc"><?= __('manage_ca_option_ecc', 'ECC (Modern, ultra-fast & efficient)') ?></option>
                     </select>
                 </div>
             </div>
             
             <div class="form-grid">
                 <div class="form-group">
-                    <label>Organization (O)</label>
-                    <input type="text" name="organization" placeholder="HomeLab" required>
+                    <label><?= __('manage_ca_label_organization', 'Organization (O)') ?></label>
+                    <input type="text" name="organization" placeholder="<?= __('manage_ca_ph_organization', 'HomeLab') ?>" required>
                 </div>
                 <div class="form-group">
-                    <label>Organizational Unit (OU)</label>
-                    <input type="text" name="org_unit" placeholder="IT" required>
+                    <label><?= __('manage_ca_label_org_unit', 'Organizational Unit (OU)') ?></label>
+                    <input type="text" name="org_unit" placeholder="<?= __('manage_ca_ph_org_unit', 'IT') ?>" required>
                 </div>
                 <div class="form-group">
-                    <label>Common Name (CN)</label>
-                    <input type="text" name="common_name" placeholder="Mia Root CA Local" required>
+                    <label><?= __('manage_ca_label_common_name', 'Common Name (CN)') ?></label>
+                    <input type="text" name="common_name" placeholder="<?= __('manage_ca_ph_common_name', 'My Local Root CA') ?>" required>
                 </div>
 
                 <div class="form-group" id="rsa_options_wrapper">
-                    <label for="key_bits_rsa">Lunghezza Chiave (RSA):</label>
+                    <label for="key_bits_rsa"><?= __('manage_ca_label_rsa_length', 'Key Length (RSA):') ?></label>
                     <select name="key_bits_rsa" id="key_bits_rsa">
-                        <option value="4096" selected>4096 bit (Consigliata per Root CA)</option>
-                        <option value="3072">3072 bit (Bilanciata)</option>
-                        <option value="2048">2048 bit (Standard minimo)</option>
+                        <option value="4096" selected><?= __('manage_ca_rsa_4096', '4096 bit (Recommended for Root CA)') ?></option>
+                        <option value="3072"><?= __('manage_ca_rsa_3072', '3072 bit (Balanced)') ?></option>
+                        <option value="2048"><?= __('manage_ca_rsa_2048', '2048 bit (Minimum standard)') ?></option>
                     </select>
                 </div>
 
                 <div class="form-group" id="ecc_options_wrapper" style="display: none;">
-                    <label for="key_curve_ecc">Tipo di Curva (ECC):</label>
+                    <label for="key_curve_ecc"><?= __('manage_ca_label_ecc_curve', 'Curve Type (ECC):') ?></label>
                     <select name="key_curve_ecc" id="key_curve_ecc">
-                        <option value="prime256v1" selected>prime256v1 (NIST P-256 - Standard)</option>
-                        <option value="secp384r1">secp384r1 (NIST P-384 - Alta Sicurezza)</option>
-                        <option value="secp521r1">secp521r1 (NIST P-521 - Paranoico)</option>
+                        <option value="prime256v1" selected><?= __('manage_ca_ecc_p256', 'prime256v1 (NIST P-256 - Standard)') ?></option>
+                        <option value="secp384r1"><?= __('manage_ca_ecc_p384', 'secp384r1 (NIST P-384 - High Security)') ?></option>
+                        <option value="secp521r1"><?= __('manage_ca_ecc_p521', 'secp521r1 (NIST P-521 - Paranoid)') ?></option>
                     </select>
                 </div>
                 
                 <div class="form-group">
-                    <label>Validità (Giorni)</label>
+                    <label><?= __('manage_ca_label_validity', 'Validity (Days)') ?></label>
                     <input type="number" name="days" value="3650" required>
                 </div>
             </div>
 
             <!-- Campo Password sempre visibile e opzionale -->
             <div class="form-group" style="margin-bottom: 1.5rem;">
-                <label for="ca_password">Password CA (Opzionale)</label>
-                <input type="password" name="ca_password" id="ca_password" placeholder="Lascia vuoto se non vuoi proteggere la chiave con password">
+                <label for="ca_password"><?= __('manage_ca_label_password', 'CA Password (Optional)') ?></label>
+                <input type="password" name="ca_password" id="ca_password" placeholder="<?= __('manage_ca_placeholder_password', 'Leave blank if you do not want to protect key with password') ?>">
                 <small style="color: var(--text-muted); display: block; margin-top: 4px;">
-                    Nota: Se inserisci una password, ti verrà richiesta ogni volta che dovrai emettere un certificato con questa CA.
+                    <?= __('manage_ca_help_password', 'Note: If set, you will be prompted for this password whenever issuing certificates with this CA.') ?>
                 </small>
             </div>
 
-            <button type="submit" name="create_ca" class="btn">Genera Root CA</button>
+            <button type="submit" name="create_ca" class="btn"><?= __('manage_ca_btn_create', 'Generate Root CA') ?></button>
         </form>
     </div>
 
     <div class="panel">
-        <h3>Certificate Authorities Configurate</h3>
+        <h3><?= __('manage_ca_list_title', 'Configured Certificate Authorities') ?></h3>
         <table>
             <thead>
                 <tr>
-                    <th>Common Name</th>
-                    <th>Soggetto Completo</th>
-                    <th>Creazione</th>
-                    <th>Scadenza</th>
-                    <th>Algoritmo / Robustezza</th>
-                    <th>Stato</th>
-                    <th>Azioni</th>
+                    <th><?= __('manage_ca_th_common_name', 'Common Name') ?></th>
+                    <th><?= __('manage_ca_th_full_subject', 'Full Subject') ?></th>
+                    <th><?= __('manage_ca_th_created_at', 'Created At') ?></th>
+                    <th><?= __('manage_ca_th_expires_at', 'Expiration') ?></th>
+                    <th><?= __('manage_ca_th_algorithm', 'Algorithm / Strength') ?></th>
+                    <th><?= __('manage_ca_th_status', 'Status') ?></th>
+                    <th><?= __('manage_ca_th_actions', 'Actions') ?></th>
                 </tr>
             </thead>
             <tbody>
@@ -181,18 +181,18 @@ $cas = $pdo->query("SELECT * FROM cas ORDER BY created_at DESC")->fetchAll();
                     </td>
                     <td>
                         <span class="badge <?=$isExpired ? 'badge-danger' : 'badge-success'?>">
-                            <?=$isExpired ? 'Scaduta' : 'Attiva'?>
+                            <?=$isExpired ? __('manage_ca_status_expired', 'Expired') : __('manage_ca_status_active', 'Active')?>
                         </span>
                     </td>
                     <td>
-                        <a href="index.php?action=download&type=ca_cert&id=<?=$ca['id']?>" class="btn btn-sm">Esporta CRT</a>
-                        <a href="index.php?action=download&type=ca_key&id=<?=$ca['id']?>" class="btn btn-sm" style="background-color:#64748b;">Esporta KEY</a>
+                        <a href="index.php?action=download&type=ca_cert&id=<?=$ca['id']?>" class="btn btn-sm"><?= __('manage_ca_btn_export_crt', 'Export CRT') ?></a>
+                        <a href="index.php?action=download&type=ca_key&id=<?=$ca['id']?>" class="btn btn-sm" style="background-color:#64748b;"><?= __('manage_ca_btn_export_key', 'Export KEY') ?></a>
                         
                         <!-- Form Sicuro per l'eliminazione tramite POST + CSRF -->
-                        <form method="POST" style="display:inline-block;" onsubmit="return confirm('Sei sicuro di voler eliminare questa CA e invalidare i certificati emessi?')">
+                        <form method="POST" style="display:inline-block;" onsubmit="return confirm('<?= __('manage_ca_confirm_delete', 'Are you sure you want to delete this CA and invalidate all issued certificates?') ?>')">
                             <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(getCsrfToken()) ?>">
                             <input type="hidden" name="delete_ca_id" value="<?=$ca['id']?>">
-                            <button type="submit" class="btn btn-sm btn-danger">Elimina</button>
+                            <button type="submit" class="btn btn-sm btn-danger"><?= __('manage_ca_btn_delete', 'Delete') ?></button>
                         </form>
                     </td>
                 </tr>

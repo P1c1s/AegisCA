@@ -12,7 +12,7 @@ global $pdo;
 // Gestione POST per l'importazione CA
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['import_ca'])) {
     if (!verifyCsrfToken($_POST['csrf_token'] ?? '')) {
-        $msg = 'Richiesta non valida o token CSRF scaduto.';
+        $msg = __('import_error_csrf_invalid', 'Invalid request or session expired.');
         $type = 'danger';
     } else {
         if (!empty($_FILES['ca_cert']['tmp_name'])) {
@@ -23,7 +23,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['import_ca'])) {
             $msg = $res['message'];
             $type = $res['success'] ? 'success' : 'danger';
         } else {
-            $msg = 'File certificato CA obbligatorio.'; 
+            $msg = __('import_error_ca_cert_required', 'CA Certificate file is required.'); 
             $type = 'danger';
         }
     }
@@ -32,7 +32,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['import_ca'])) {
 // Gestione POST per l'importazione Certificato Foglia
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['import_cert'])) {
     if (!verifyCsrfToken($_POST['csrf_token'] ?? '')) {
-        $msg = 'Richiesta non valida o token CSRF scaduto.';
+        $msg = __('import_error_csrf_invalid', 'Invalid request or session expired.');
         $type = 'danger';
     } else {
         if (!empty($_FILES['cert_file']['tmp_name'])) {
@@ -45,7 +45,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['import_cert'])) {
             $msg = $res['message'];
             $type = $res['success'] ? 'success' : 'danger';
         } else {
-            $msg = 'File certificato obbligatorio.'; 
+            $msg = __('import_error_cert_required', 'Certificate file is required.'); 
             $type = 'danger';
         }
     }
@@ -61,52 +61,63 @@ $cas = $pdo->query("SELECT id, common_name FROM cas ORDER BY common_name ASC")->
 
     <div class="form-grid" style="grid-template-columns: repeat(auto-fit, minmax(450px, 1fr)); gap: 20px;">
         
+        <!-- Form Importazione Root CA -->
         <div class="panel">
-            <h3>Importa Esistente Certificate Authority (Root CA)</h3>
+            <h3><?= __('import_ca_title', 'Import Existing Certificate Authority (Root CA)') ?></h3>
             <form method="POST" enctype="multipart/form-data">
                 <!-- Campo Token CSRF -->
                 <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(getCsrfToken()) ?>">
 
                 <div class="form-group" style="margin-bottom: 15px;">
-                    <label>Certificato della CA (.crt, .pem, .cer) *</label>
+                    <label><?= __('import_ca_cert_label', 'CA Certificate (.crt, .pem, .cer) *') ?></label>
                     <input type="file" name="ca_cert" accept=".crt,.pem,.cer" required>
                 </div>
                 <div class="form-group" style="margin-bottom: 20px;">
-                    <label>Chiave Privata della CA (.key, .pem) <small style="color: var(--text-muted);">(Opzionale)</small></label>
+                    <label>
+                        <?= __('import_ca_key_label', 'CA Private Key (.key, .pem)') ?> 
+                        <small style="color: var(--text-muted);">(<?= __('import_optional', 'Optional') ?>)</small>
+                    </label>
                     <input type="file" name="ca_key" accept=".key,.pem">
                 </div>
-                <button type="submit" name="import_ca" class="btn">Importa Root CA</button>
+                <button type="submit" name="import_ca" class="btn"><?= __('import_btn_ca', 'Import Root CA') ?></button>
             </form>
         </div>
 
+        <!-- Form Importazione Certificato Foglia -->
         <div class="panel">
-            <h3>Importa Esistente Certificato Foglia / End-Entity</h3>
+            <h3><?= __('import_cert_title', 'Import Existing End-Entity / Leaf Certificate') ?></h3>
             <form method="POST" enctype="multipart/form-data">
                 <!-- Campo Token CSRF -->
                 <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(getCsrfToken()) ?>">
 
                 <div class="form-group" style="margin-bottom: 15px;">
-                    <label>Associa alla CA firmataria *</label>
+                    <label><?= __('import_select_ca_label', 'Associate with Signing CA *') ?></label>
                     <select name="ca_id" required>
-                        <option value="" disabled selected>-- Seleziona la CA --</option>
+                        <option value="" disabled selected>-- <?= __('import_select_ca_placeholder', 'Select CA') ?> --</option>
                         <?php foreach($cas as $ca): ?>
                             <option value="<?=$ca['id']?>"><?=htmlspecialchars($ca['common_name'])?></option>
                         <?php endforeach; ?>
                     </select>
                 </div>
                 <div class="form-group" style="margin-bottom: 15px;">
-                    <label>Certificato (.crt, .pem) *</label>
+                    <label><?= __('import_cert_file_label', 'Certificate (.crt, .pem) *') ?></label>
                     <input type="file" name="cert_file" accept=".crt,.pem" required>
                 </div>
                 <div class="form-group" style="margin-bottom: 15px;">
-                    <label>Chiave Privata (.key) <small style="color: var(--text-muted);">(Opzionale)</small></label>
+                    <label>
+                        <?= __('import_cert_key_label', 'Private Key (.key)') ?> 
+                        <small style="color: var(--text-muted);">(<?= __('import_optional', 'Optional') ?>)</small>
+                    </label>
                     <input type="file" name="cert_key" accept=".key">
                 </div>
                 <div class="form-group" style="margin-bottom: 20px;">
-                    <label>Subject Alternative Names (SAN) <small style="color: var(--text-muted);">(Opzionale, separati da virgola)</small></label>
-                    <input type="text" name="san_dns" placeholder="esempio.local, *.esempio.local, 192.168.1.100">
+                    <label>
+                        <?= __('import_san_label', 'Subject Alternative Names (SAN)') ?> 
+                        <small style="color: var(--text-muted);">(<?= __('import_san_help', 'Optional, comma separated') ?>)</small>
+                    </label>
+                    <input type="text" name="san_dns" placeholder="<?= __('import_san_placeholder', 'example.local, *.example.local, 192.168.1.100') ?>">
                 </div>
-                <button type="submit" name="import_cert" class="btn" style="background-color: #0284c7;">Importa Certificato</button>
+                <button type="submit" name="import_cert" class="btn" style="background-color: #0284c7;"><?= __('import_btn_cert', 'Import Certificate') ?></button>
             </form>
         </div>
 

@@ -1,7 +1,5 @@
 <?php
 // src/Pages/404.php
-// Nota: Gestito centralmente dal PageController.
-// È buona norma impostare il codice di risposta HTTP 404
 http_response_code(404);
 ?>
 
@@ -15,15 +13,15 @@ http_response_code(404);
         </div>
 
         <h1 style="font-size: 4rem; margin: 0; color: #e74c3c; line-height: 1;">404</h1>
-        <h2 style="font-size: 1.3rem; margin-top: 0.5rem; margin-bottom: 1rem;">Pagina non trovata</h2>
+        <h2 style="font-size: 1.3rem; margin-top: 0.5rem; margin-bottom: 1rem;"><?= __('404_error_title', 'Page Not Found') ?></h2>
         
         <p style="color: #666; margin-bottom: 2rem;">
-            La pagina che stai cercando non esiste, è stata rimossa o l'URL inserito non è corretto.
+            <?= __('404_error_description', 'The page you are looking for does not exist, has been removed, or the URL entered is incorrect.') ?>
         </p>
 
         <div style="display: flex; gap: 10px; justify-content: center;">
             <a href="index.php?page=dashboard" class="btn" style="text-decoration: none;">
-                Torna alla Dashboard
+                <?= __('404_btn_back_to_dashboard', 'Back to Dashboard') ?>
             </a>
         </div>
     </div>

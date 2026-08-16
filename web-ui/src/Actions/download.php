@@ -6,7 +6,7 @@ global $pdo;
 
 if (!isset($_GET['type']) || !isset($_GET['id'])) {
     http_response_code(400);
-    die("Parametri mancanti.");
+    die(__('download_error_missing_params', 'Missing required parameters.'));
 }
 
 $type = $_GET['type'];
@@ -18,7 +18,7 @@ if ($type === 'ca_cert' || $type === 'ca_key') {
     $res = $stmt->fetch();
     if (!$res) {
         http_response_code(404);
-        die("CA non trovata.");
+        die(__('download_error_ca_not_found', 'Certificate Authority not found.'));
     }
 
     $filename = str_replace(' ', '_', $res['common_name']);
@@ -37,7 +37,7 @@ if ($type === 'ca_cert' || $type === 'ca_key') {
     $res = $stmt->fetch();
     if (!$res) {
         http_response_code(404);
-        die("Certificato non trovato.");
+        die(__('download_error_cert_not_found', 'Certificate not found.'));
     }
 
     $filename = str_replace(' ', '_', $res['common_name']);
@@ -50,5 +50,8 @@ if ($type === 'ca_cert' || $type === 'ca_key') {
         header('Content-Disposition: attachment; filename="' . $filename . '.key"');
         echo $res['key_data'];
     }
+} else {
+    http_response_code(400);
+    die(__('download_error_invalid_type', 'Invalid download type specified.'));
 }
 exit;
