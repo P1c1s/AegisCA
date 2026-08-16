@@ -80,3 +80,9 @@ function verifyCsrfToken(?string $token): bool {
     }
     return hash_equals($_SESSION['csrf_token'], $token);
 }
+
+// 7. Inizializzazione Sistema Multilingua
+$lang_init_path = ROOT_PATH . 'src/lang_init.php';
+if (file_exists($lang_init_path)) {
+    require_once $lang_init_path;
+}
