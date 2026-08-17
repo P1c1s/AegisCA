@@ -22,7 +22,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $current_lang = $_SESSION['lang'] ?? 'en';
         if ($newLang !== $current_lang) {
             if (Auth::updateLanguage($userId, $newLang)) {
-                $_SESSION['lang'] = $newLang; // Aggiorna subito la sessione
+                $_SESSION['lang'] = $newLang; // Aggiorna la lingua in sessione
                 $langUpdated = true;
             } else {
                 $msg = __('profile_msg_error_lang', 'Error updating ' . $newLang . ' language.');
@@ -31,7 +31,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
 
-        // 3. Aggiornamento Password (solo se inserita e se non ci sono stati errori precedenti)
+        // 3. Aggiornamento Password
         if (!$hasError && !empty($newPassword)) {
             if (Auth::changePassword($userId, $newPassword)) {
                 $passwordUpdated = true;
@@ -42,20 +42,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
 
-        // 4. Gestione Messaggio di Successo / Nessuna Modifica
+        // 4. Gestione Redirect e Messaggi via Sessione Flash
         if (!$hasError) {
             if ($langUpdated || $passwordUpdated) {
-                // Recupera il messaggio tradotto o usa il testo di default
-                $translatedMsg = __('profile_msg_success', 'Profile updated successfully.');
-                $msg = !empty($translatedMsg) ? $translatedMsg : 'Profile updated successfully.';
-                $type = 'success';
+                // Imposta il messaggio flash prima di ricaricare
+                $_SESSION['flash_msg'] = 'profile_msg_success';
+                $_SESSION['flash_type'] = 'success';
             } else {
-                $translatedMsg = __('profile_msg_no_changes', 'No changes were made.');
-                $msg = !empty($translatedMsg) ? $translatedMsg : 'No changes were made.';
-                $type = 'info';
+                $_SESSION['flash_msg'] = 'profile_msg_no_changes';
+                $_SESSION['flash_type'] = 'info';
             }
+
+            // Ricarica la pagina: carica tutto il layout con il dizionario della NUOVA lingua
+            header("Location: " . $_SERVER['REQUEST_URI']);
+            exit();
         }
     }
+}
+
+// Recupera ed elimina il messaggio flash inviato dal redirect
+if (isset($_SESSION['flash_msg'])) {
+    $msgKey = $_SESSION['flash_msg'];
+    $type = $_SESSION['flash_type'] ?? 'info';
+    
+    // Il messaggio viene tradotto ORA con la nuova lingua già attiva
+    $defaultText = ($msgKey === 'profile_msg_success') ? 'Profile updated successfully.' : 'No changes were made.';
+    $msg = __($msgKey, $defaultText);
+
+    unset($_SESSION['flash_msg'], $_SESSION['flash_type']);
 }
 
 // Recupera la lingua aggiornata per il menu a tendina
