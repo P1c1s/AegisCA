@@ -5,7 +5,7 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// 1. Lingue supportate (inclusi fi, fr, de, pl, ro, es, pt, nl)
+// 1. Lingue supportate
 $GLOBALS['supported_langs'] = [
     'de', // Tedesco
     'en', // Inglese
