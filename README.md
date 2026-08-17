@@ -4,6 +4,18 @@
   <em>"Aegis CA, your local SSL certificate manager."</em>
 </p>
 
+![DE](https://img.shields.io/badge/🇩🇪-Deutsch-blue)
+![EN](https://img.shields.io/badge/🇬🇧-English-blue)
+![ES](https://img.shields.io/badge/🇪🇸-Español-blue)
+![FI](https://img.shields.io/badge/🇫🇮-Suomi-blue)
+![FR](https://img.shields.io/badge/🇫🇷-Français-blue)
+![IT](https://img.shields.io/badge/🇮🇹-Italiano-blue)
+![NL](https://img.shields.io/badge/🇳🇱-Nederlands-blue)
+![PL](https://img.shields.io/badge/🇵🇱-Polski-blue)
+![PT](https://img.shields.io/badge/🇵🇹-Português-blue)
+![RO](https://img.shields.io/badge/🇷🇴-Română-blue)
+
+
 # Aegis CA 
 
 
@@ -359,3 +371,5 @@ By installing the Aegis Root CA certificate **just once per device**, your syste
 5. Under *Enable full trust for root certificates*, toggle the switch **ON** for your Aegis Root CA.
 
 ---
+
+
