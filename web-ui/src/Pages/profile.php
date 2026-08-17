@@ -79,12 +79,15 @@ $current_lang = $_SESSION['lang'] ?? 'en';
                 <label><?= __('profile_label_language', 'Interface Language') ?></label>
                 <select name="default_lang" required>
                     <option value="de" <?= $current_lang === 'de' ? 'selected' : '' ?>>🇩🇪 Deutsch (DE)</option>
-                    <option value="en" <?= $current_lang === 'en' ? 'selected' : '' ?>>English (EN)</option>
-                    <option value="fi" <?= $current_lang === 'fi' ? 'selected' : '' ?>>Suomi / Finnish (FI)</option>
-                    <option value="fr" <?= $current_lang === 'fr' ? 'selected' : '' ?>>Français (FR)</option>
-                    <option value="it" <?= $current_lang === 'it' ? 'selected' : '' ?>>Italiano (IT)</option>
-                    <option value="pl" <?= $current_lang === 'pl' ? 'selected' : '' ?>>Polski (PL)</option>
-                    <option value="ro" <?= $current_lang === 'ro' ? 'selected' : '' ?>>Română (RO)</option>
+                    <option value="en" <?= $current_lang === 'en' ? 'selected' : '' ?>>🇬🇧 English (EN)</option>
+                    <option value="es" <?= $current_lang === 'es' ? 'selected' : '' ?>>🇪🇸 Español (ES)</option>
+                    <option value="fi" <?= $current_lang === 'fi' ? 'selected' : '' ?>>🇫🇮 Suomi / Finnish (FI)</option>
+                    <option value="fr" <?= $current_lang === 'fr' ? 'selected' : '' ?>>🇫🇷 Français (FR)</option>
+                    <option value="it" <?= $current_lang === 'it' ? 'selected' : '' ?>>🇮🇹 Italiano (IT)</option>
+                    <option value="nl" <?= $current_lang === 'nl' ? 'selected' : '' ?>>🇳🇱 Nederlands (NL)</option>
+                    <option value="pl" <?= $current_lang === 'pl' ? 'selected' : '' ?>>🇵🇱 Polski (PL)</option>
+                    <option value="pt" <?= $current_lang === 'pt' ? 'selected' : '' ?>>🇵🇹 Português (PT)</option>
+                    <option value="ro" <?= $current_lang === 'ro' ? 'selected' : '' ?>>🇷🇴 Română (RO)</option>
                 </select>
             </div>
 
