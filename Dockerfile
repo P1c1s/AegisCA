@@ -3,7 +3,7 @@ FROM alpine:3.19
 # Metadati
 LABEL org.opencontainers.image.title="Aegis CA"
 LABEL org.opencontainers.image.description="Aegis CA is a lightweight, secure, and completely self-contained web application for creating, signing, and managing a Local Certificate Authority (CA) and its corresponding self-signed SSL/TLS certificates."
-LABEL org.opencontainers.image.source="https://github.com/p1c1s/aegis-ca"
+LABEL org.opencontainers.image.source="https://github.com/P1c1s/AegisCA"
 LABEL org.opencontainers.image.licenses="Apache-2.0"
 LABEL org.opencontainers.image.authors="p1c1s"
 
@@ -50,8 +50,8 @@ RUN sed -i 's/#LoadModule rewrite_module/LoadModule rewrite_module/' /etc/apache
 RUN rm -f /var/www/localhost/htdocs/index.html
 COPY ./web-ui/ /var/www/localhost/htdocs/
 
-# 6. Copia il file db.sql dentro /data (il database lo leggerà da lì durante l'entrypoint)
-COPY db.sql /data/db.sql
+# # 6. Copia il file db.sql dentro /data (il database lo leggerà da lì durante l'entrypoint)
+# COPY db.sql /data/db.sql RIMOSSO
 
 # 7. Copia lo script aegis-ca.py dentro /bin
 COPY ./aegis-ca.py /bin/aegis-ca.py
