@@ -40,8 +40,7 @@ if (isset($_SESSION['lang']) && in_array($_SESSION['lang'], $supported_langs, tr
 $currentLang = $current_lang;
 
 // 4. Caricamento file traduzione
-// Se i file sono dentro "src/lang/", cambia la riga sotto in: __DIR__ . "/src/lang/{$current_lang}.php";
-$lang_file = __DIR__ . "/lang/{$current_lang}.php";
+$lang_file = __DIR__ . "/{$current_lang}.php";
 
 if (file_exists($lang_file)) {
     $translations = require $lang_file;
