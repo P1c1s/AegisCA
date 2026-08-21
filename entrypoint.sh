@@ -16,10 +16,10 @@ if [ -n "$TZ" ]; then
     if [ -f "/usr/share/zoneinfo/$TZ" ]; then
         cp "/usr/share/zoneinfo/$TZ" /etc/localtime
         echo "$TZ" > /etc/timezone
-        
+
         PHP_INI_DIR="/etc/php83/conf.d"
         [ ! -d "$PHP_INI_DIR" ] && PHP_INI_DIR="/etc/php8/conf.d"
-        
+
         mkdir -p "$PHP_INI_DIR"
         echo "date.timezone = \"$TZ\"" > "$PHP_INI_DIR/99_timezone.ini"
     fi
@@ -36,10 +36,10 @@ if [ ! -d "/data/mysql" ]; then
     echo "[INFO] Prima esecuzione: Inizializzazione di MariaDB in /data..."
     mysql_install_db --user=mysql --datadir=/data > /dev/null
 
-    # Avvia temporaneamente MariaDB in background per l'inizializzazione
+    # Avvia temporaneamente MariaDB in background per la configurazione iniziale
     mysqld_safe --user=mysql --datadir=/data &
     pid="$!"
-    
+
     # Attendi che il database sia pronto
     RETRIES=30
     until mysqladmin ping --silent || [ $RETRIES -eq 0 ]; do
@@ -53,23 +53,10 @@ if [ ! -d "/data/mysql" ]; then
     fi
 
     # ==========================================
-    # 2. Importa lo Schema SQL
+    # 2. Creazione del Database, Utente e Privilegi
+    # (Lo schema delle tabelle verrà creato da PHP via Migrator)
     # ==========================================
-    if [ -f "/tmp/db.sql" ]; then
-        echo "[INFO] Importazione dello schema db.sql da /tmp..."
-        mysql < /tmp/db.sql
-    elif [ -f "/data/db.sql" ]; then
-        echo "[INFO] Importazione dello schema db.sql da /data..."
-        mysql < /data/db.sql
-    else
-        echo "[WARN] Nessun file db.sql trovato, creo solo il database VUOTO."
-        mysql -e "CREATE DATABASE IF NOT EXISTS \`$DB_NAME\` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
-    fi
-
-    # ==========================================
-    # 3. Creazione dinamica di Utente e Privilegi
-    # ==========================================
-    echo "[INFO] Creazione utente DB '$DB_USER' e assegnazione privilegi sul DB '$DB_NAME'..."
+    echo "[INFO] Creazione database '$DB_NAME' e utente '$DB_USER'..."
     mysql -e "
         CREATE DATABASE IF NOT EXISTS \`$DB_NAME\` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
         CREATE USER IF NOT EXISTS '$DB_USER'@'localhost' IDENTIFIED BY '$DB_PASS';
@@ -87,7 +74,7 @@ if [ ! -d "/data/mysql" ]; then
 fi
 
 # ==========================================
-# 4. Avvia MariaDB definitivo in background
+# 3. Avvia MariaDB definitivo in background
 # ==========================================
 echo "[INFO] Avvio di MariaDB..."
 mysqld_safe --user=mysql --datadir=/data &
@@ -99,7 +86,7 @@ until mysqladmin ping --silent || [ $RETRIES -eq 0 ]; do
 done
 
 # ==========================================
-# 5. Avvia Apache in primo piano
+# 4. Avvia Apache in primo piano
 # ==========================================
 echo "[INFO] Avvio di Apache web server..."
 exec httpd -D FOREGROUND

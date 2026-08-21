@@ -5,7 +5,6 @@
 $version_file = __DIR__ . '/VERSION';
 define('APP_VERSION', file_exists($version_file) ? trim(file_get_contents($version_file)) : '0.0.0');
 
-
 // 1. Monitoraggio errori (tienilo attivo in sviluppo, disattivalo in produzione!)
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
@@ -16,8 +15,6 @@ define('DB_HOST', getenv('DB_HOST') ?: 'localhost');
 define('DB_USER', getenv('DB_USER') ?: 'athena');
 define('DB_PASS', getenv('DB_PASS') ?: 'goat-snake-gorgon');
 define('DB_NAME', getenv('DB_NAME') ?: 'aegis_ca');
-
-
 
 // 3. Percorsi globali
 if (!defined('ROOT_PATH')) {
@@ -34,16 +31,35 @@ $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
 // Generazione della BASE_URL dinamica
 define('BASE_URL', $protocol . $host . '/');
 
-// 4. Connessione sicura tramite PDO
+// 4. Connessione sicura tramite PDO ed esecuzione delle Migrazioni
 try {
     $pdo = new PDO("mysql:host=" . DB_HOST . ";dbname=" . DB_NAME . ";charset=utf8mb4", DB_USER, DB_PASS, [
         PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
         PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
         PDO::ATTR_EMULATE_PREPARES => false,
     ]);
+
+    // --- ESECUZIONE AUTOMATICA MIGRAZIONI DATABASE ---
+    $migrator_file = ROOT_PATH . 'src/Classes/Migrator.php';
+    $migrations_dir = ROOT_PATH . 'src/Database/Migrations';
+
+    if (file_exists($migrator_file) && is_dir($migrations_dir)) {
+        require_once $migrator_file;
+        Migrator::run($pdo, $migrations_dir);
+    } else {
+        // Debug veloce per vedere se il percorso è sbagliato
+        die("ERRORE: Non trovo i file. <br>Cerco Migrator qui: $migrator_file <br>Cerco Migrations qui: $migrations_dir");
+    }
+
+    if (file_exists($migrator_file) && is_dir($migrations_dir)) {
+        require_once $migrator_file;
+        Migrator::run($pdo, $migrations_dir);
+    }
+
 } catch (PDOException $e) {
-    // Sostituisci temporaneamente la riga con questa per vedere il dettaglio:
     die("Errore dettagliato DB: " . $e->getMessage()); 
+} catch (Exception $e) {
+    die("Errore durante l'aggiornamento dello schema Database: " . $e->getMessage());
 }
 
 // 5. Inizializzazione Sessione e Impostazioni di Sicurezza Cookie
