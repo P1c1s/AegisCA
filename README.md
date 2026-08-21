@@ -140,7 +140,7 @@ https://github.com/users/P1c1s/packages/container/package/aegis-ca
 docker pull ghcr.io/p1c1s/aegis-ca:latest
 ```
 
-#### Running with Docker
+#### Docker CLI
 
 You can pull and run the container directly using the Docker CLI:
 
@@ -166,7 +166,7 @@ Download the [docker-compose.yml](https://github.com/P1c1s/AegisCA/blob/main/doc
 docker compose up -d
 ```
 
-> **Important:** For security reasons, it is highly recommended to customize the default database credentials (DB_USER, DB_PASS) before starting the service. Define your custom credentials directly inside the environment section of your docker-compose.yml file.
+> **Important:** For security reasons, it is highly recommended to customize the default database credentials (DB_NAME, DB_USER, DB_PASS) before starting the service. Define your custom credentials directly inside the environment section of your docker-compose.yml file.
 
 ## First Configuration
 
