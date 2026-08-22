@@ -30,19 +30,24 @@ log() {
 # ==========================================
 # Banner di Avvio
 # ==========================================
-cat << "EOF"
-/--------------------------------------------------------------------\
-|                                                                    |
-|                             AegisCA                                |
-EOF
-printf "|                           Version %-8s                         |\n" "$APP_VER"
-cat << "EOF"
-|--------------------------------------------------------------------|
-| OpenSource Certificate Authority & Public Key Infrastructure (PKI) |
-| Web Interface and Management Tool                                  |
-\--------------------------------------------------------------------/
+# Codici colore ANSI
+RED='\033[1;31m'
+YELLOW='\033[38;5;220m'
+WHITE='\033[1;37m'
+NC='\033[0m' # No Color
 
-EOF
+# Formattazione precisa della versione
+VER_STR=$(printf "%-8s" "$APP_VER")
+
+echo -e "${RED}*--------------------------------------------------------------------*${NC}"
+echo -e "${RED}|${NC}                                                                    ${RED}|${NC}"
+echo -e "${RED}|${NC}                             ${WHITE}AegisCA${NC}                                ${RED}|${NC}"
+echo -e "${RED}|${NC}                           Version ${YELLOW}${VER_STR}${NC}                         ${RED}|${NC}"
+echo -e "${RED}|--------------------------------------------------------------------|${NC}"
+echo -e "${RED}|${NC} ${YELLOW}OpenSource Certificate Authority & Public Key Infrastructure (PKI)${NC} ${RED}|${NC}"
+echo -e "${RED}|${NC} ${WHITE}Web Interface and Management Tool${NC}                                  ${RED}|${NC}"
+echo -e "${RED}*--------------------------------------------------------------------*${NC}"
+echo ""
 
 # ==========================================
 # Configurazione Timezone
