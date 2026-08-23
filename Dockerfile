@@ -37,11 +37,11 @@ RUN pip3 install --break-system-packages tabulate mysql-connector-python bcrypt
 RUN mkdir -p /data /run/mysqld && \
     chown -R mysql:mysql /data /run/mysqld && \
     rm -rf /etc/my.cnf.d/*
-COPY ./mariadb.cnf /etc/my.cnf.d/mariadb.cnf
+COPY docker/config/mariadb.cnf /etc/my.cnf.d/mariadb.cnf
 
 # 4. Configura Apache tramite file dedicato (pulisce conf di default)
 RUN rm -rf /etc/apache2/conf.d/* && mkdir -p /run/apache2
-COPY ./httpd.conf /etc/apache2/httpd.conf
+COPY docker/config/httpd.conf /etc/apache2/httpd.conf
 
 # 5. Copia la Web UI
 RUN rm -f /var/www/localhost/htdocs/index.html
@@ -57,7 +57,7 @@ RUN chown -R apache:apache /var/www/localhost/htdocs/
 WORKDIR /
 
 # 8. Entrypoint
-COPY ./entrypoint.sh /entrypoint.sh
+COPY docker/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
 # 9. Healthcheck
