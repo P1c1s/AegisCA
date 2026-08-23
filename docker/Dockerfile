@@ -7,6 +7,10 @@ LABEL org.opencontainers.image.source="https://github.com/P1c1s/AegisCA"
 LABEL org.opencontainers.image.licenses="Apache-2.0"
 LABEL org.opencontainers.image.authors="p1c1s"
 
+
+ARG APP_VERSION=0.0.0
+ENV AEGIS_VERSION=$APP_VERSION
+
 # 1. Aggiorna i pacchetti e installa le dipendenze
 RUN apk update && apk add --no-cache \
     apache2 \

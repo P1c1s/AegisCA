@@ -15,18 +15,21 @@ try:
 except ImportError:
     HAS_CRYPTO = False
 
-# Percorso assoluto per l'ambiente Docker/produzione
-ABS_VERSION_FILE = Path("/var/www/localhost/htdocs/config/VERSION")
+# 1. Priorità assoluta: variabile d'ambiente (iniettata dal Dockerfile in produzione)
+APP_VERSION = os.getenv("AEGIS_VERSION")
 
-# Percorso relativo di fallback per lo sviluppo locale
-LOCAL_VERSION_FILE = Path(__file__).resolve().parent.parent / "VERSION"
-
-if ABS_VERSION_FILE.exists():
-    APP_VERSION = ABS_VERSION_FILE.read_text().strip()
-elif LOCAL_VERSION_FILE.exists():
-    APP_VERSION = LOCAL_VERSION_FILE.read_text().strip()
-else:
-    APP_VERSION = "30.03.2021"
+# 2. Fallback: sviluppo locale senza Docker (cerca nella cartella .z/)
+if not APP_VERSION:
+    # Prova il percorso relativo alla radice o alla posizione dello script
+    local_path = Path(".z/VERSION")
+    script_path = Path(__file__).resolve().parent.parent / ".z" / "VERSION"
+    
+    if local_path.exists():
+        APP_VERSION = local_path.read_text().strip()
+    elif script_path.exists():
+        APP_VERSION = script_path.read_text().strip()
+    else:
+        APP_VERSION = "0.0.0"
 
 # --- CONFIGURAZIONE DINAMICA VIA ENVIRONMENT ---
 DB_CONFIG = {

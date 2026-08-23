@@ -1,9 +1,8 @@
 <?php
 // config/config.php
 
-// Legge la versione dal file VERSION nella radice del progetto
-$version_file = __DIR__ . '/VERSION';
-define('APP_VERSION', file_exists($version_file) ? trim(file_get_contents($version_file)) : '0.0.0');
+// Legge la versione dall'argomento passato in fase dei build
+define('APP_VERSION', getenv('AEGIS_VERSION') ?: '0.0.0');
 
 // 1. Monitoraggio errori (tienilo attivo in sviluppo, disattivalo in produzione!)
 ini_set('display_errors', 1);

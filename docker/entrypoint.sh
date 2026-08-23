@@ -7,16 +7,7 @@ set -e
 DB_NAME="${DB_NAME:-aegis_ca}"
 DB_USER="${DB_USER:-athena}"
 DB_PASS="${DB_PASS:-goat-snake-gorgon}"
-
-# Legge la versione dal file VERSION se esiste
-VERSION_FILE="/var/www/localhost/htdocs/web-ui/config/VERSION"
-[ ! -f "$VERSION_FILE" ] && VERSION_FILE="/var/www/localhost/htdocs/config/VERSION"
-
-if [ -f "$VERSION_FILE" ]; then
-    APP_VER=$(cat "$VERSION_FILE" | tr -d '\r\n')
-else
-    APP_VER="0.6.0"
-fi
+APP_VERSION="${AEGIS_VERSION:-0.0.0}"
 
 # Function per formattare i log in stile Pi-hole / FTL
 log() {
@@ -35,7 +26,7 @@ YELLOW='\033[38;5;220m'
 WHITE='\033[1;37m'
 NC='\033[0m' # No Color
 
-VER_STR=$(printf "%-8s" "$APP_VER")
+VER_STR=$(printf "%-8s" "$APP_VERSION")
 
 echo -e "${RED}*--------------------------------------------------------------------*${NC}"
 echo -e "${RED}|${NC}                                                                    ${RED}|${NC}"
