@@ -1,5 +1,7 @@
 <p align="center">
-  <img src="resources/aegis-ca.svg" alt="Aegis CA Logo" width="168" height="270">
+  <a href="https://github.com/P1c1s/AegisCA">
+    <img src="resources/aegis-ca.svg" alt="Aegis CA Logo" width="168" height="270">
+  </a>
   <br>
   <em>"Aegis CA, your local SSL certificate manager."</em>
 </p>
