@@ -33,13 +33,13 @@ RUN apk update && apk add --no-cache \
 # 2. Installa librerie Python
 RUN pip3 install --break-system-packages tabulate mysql-connector-python bcrypt
 
-# 3. Configura MariaDB tramite file dedicato (pulisce conf di default)
+# 3. Configura MariaDB
 RUN mkdir -p /data /run/mysqld && \
     chown -R mysql:mysql /data /run/mysqld && \
     rm -rf /etc/my.cnf.d/*
 COPY docker/config/mariadb.cnf /etc/my.cnf.d/mariadb.cnf
 
-# 4. Configura Apache tramite file dedicato (pulisce conf di default)
+# 4. Configura Apache
 RUN rm -rf /etc/apache2/conf.d/* && mkdir -p /run/apache2
 COPY docker/config/httpd.conf /etc/apache2/httpd.conf
 
