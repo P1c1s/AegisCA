@@ -25,7 +25,11 @@
 
 Designed for **developers**, **system administrators**, and **HomeLab** enthusiasts, Aegis CA allows you to independently manage your own **PKI (Public Key Infrastructure)**. A PKI is a system of policies, processes, and technologies used to create, manage, distribute, store, and revoke digital certificates and public-key encryption. By hosting your own local PKI, you can eliminate browser security warnings for internal services (e.g., FreshRSS, Pi-hole, Proxmox, Home Assistant, and many others) without relying on external public certificate authorities.
 
+
+
 ##### Recommended Setup: Nginx Proxy Manager (NPM)
+
+> ⚠️ **Note on HTTPS Support:** Aegis CA serves its Web Interface strictly over **HTTP (port 80)** by design. It does not terminate SSL/TLS connection natively. To access the web panel securely via HTTPS (`https://aegis-ca.local`), you must place a **Reverse Proxy** (such as Nginx Proxy Manager, Traefik, or Caddy) in front of the container.
 
 For seamless local traffic routing, we highly recommend pairing Aegis CA with [Nginx Proxy Manager (NPM)](https://github.com/NginxProxyManager/nginx-proxy-manager). NPM makes it incredibly easy to secure your reverse proxies because it **supports custom SSL certificate uploads**. Simply generate your private key (`.key`) and certificate (`.crt`/`.pem`) in Aegis CA, upload them directly to NPM as a "Custom Certificate", and assign them to your local domains in seconds.
 
