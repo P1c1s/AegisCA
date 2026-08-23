@@ -1,0 +1,12 @@
+[mysqld]
+user = mysql
+datadir = /data
+port = 3306
+bind-address = 0.0.0.0
+
+# General Log disattivato
+general_log = 0
+
+# Ottimizzazioni
+skip-name-resolve
+max_connections = 100
