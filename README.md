@@ -27,7 +27,7 @@ Designed for **developers**, **system administrators**, and **HomeLab** enthusia
 
 
 
-##### Recommended Setup: Nginx Proxy Manager (NPM)
+### Recommended Setup
 
 > ⚠️ **Note on HTTPS Support:** Aegis CA serves its Web Interface strictly over **HTTP (port 80)** by design. It does not terminate SSL/TLS connection natively. To access the web panel securely via HTTPS (`https://aegis-ca.local`), you must place a **Reverse Proxy** (such as Nginx Proxy Manager, Traefik, or Caddy) in front of the container.
 
@@ -136,7 +136,7 @@ The containerized approach allows you to:
 * simplify updates;
 * have a reproducible environment in seconds.
 
-The official image is available on the GitHub Container Registry:
+The official image is multi-architecture, supporting both **`linux/amd64`** (x86_64) and **`linux/arm64`** (e.g., Raspberry Pi, Apple Silicon, ARM 64-bit servers), and is available on the GitHub Container Registry:
 
 https://github.com/users/P1c1s/packages/container/package/aegis-ca
 
