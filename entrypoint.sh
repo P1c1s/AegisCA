@@ -30,13 +30,11 @@ log() {
 # ==========================================
 # Banner di Avvio
 # ==========================================
-# Codici colore ANSI
 RED='\033[1;31m'
 YELLOW='\033[38;5;220m'
 WHITE='\033[1;37m'
 NC='\033[0m' # No Color
 
-# Formattazione precisa della versione
 VER_STR=$(printf "%-8s" "$APP_VER")
 
 echo -e "${RED}*--------------------------------------------------------------------*${NC}"
@@ -75,10 +73,10 @@ chown -R mysql:mysql /run/mysqld /data
 # ==========================================
 if [ ! -d "/data/mysql" ]; then
     log "INFO" "First run detected. Initializing MariaDB storage in /data..."
-    mysql_install_db --user=mysql --datadir=/data > /dev/null
+    mysql_install_db --user=mysql --datadir=/data > /dev/null 2>&1
 
     # Avvia temporaneamente MariaDB in background per la configurazione iniziale
-    mysqld_safe --user=mysql --datadir=/data > /dev/null 2>&1 &
+    mariadbd --user=mysql --datadir=/data > /dev/null 2>&1 &
     tmp_pid="$!"
 
     RETRIES=30
@@ -107,14 +105,14 @@ if [ ! -d "/data/mysql" ]; then
 
     # Spegne il MariaDB temporaneo
     mysqladmin -u root shutdown > /dev/null 2>&1
-    wait "$tmp_pid"
+    wait "$tmp_pid" 2>/dev/null || true
 fi
 
 # ==========================================
-# 2. Avvia MariaDB definitivo
+# 2. Avvia MariaDB Silenzioso in Background
 # ==========================================
-log "INFO" "Starting MariaDB database service..."
-mysqld_safe --user=mysql --datadir=/data > /dev/null 2>&1 &
+# Silenziamo l'output verboso di avvio di InnoDB per non inquinare la console
+mariadbd --user=mysql --datadir=/data > /dev/null 2>&1 &
 
 RETRIES=15
 until mysqladmin ping --silent || [ $RETRIES -eq 0 ]; do
@@ -122,17 +120,21 @@ until mysqladmin ping --silent || [ $RETRIES -eq 0 ]; do
     RETRIES=$((RETRIES - 1))
 done
 
-log "INFO" "MariaDB service is active and listening"
-
 # ==========================================
-# 3. Rilevamento IP locale e Avvio Apache
+# 3. Rilevamento IP, Log Informativi e Avvio
 # ==========================================
 CONTAINER_IP=$(hostname -i 2>/dev/null | awk '{print $1}')
 [ -z "$CONTAINER_IP" ] && CONTAINER_IP="127.0.0.1"
 
+log "INFO" "MariaDB service is active and listening"
 log "INFO" "Container IPv4 address: $CONTAINER_IP"
 log "INFO" "Web server ports:"
 log "INFO" "http://$CONTAINER_IP:80 (HTTP, IPv4, OK)"
 log "INFO" "AegisCA engine ready. Starting Apache web server..."
+
+# 3 righe vuote prima dei log di Apache
+echo ""
+echo ""
+echo ""
 
 exec httpd -D FOREGROUND
