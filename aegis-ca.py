@@ -2,7 +2,8 @@
 import argparse
 import sys
 import os
-import mysql.connector
+import pymysql
+import pymysql.cursors
 import bcrypt
 from tabulate import tabulate
 from pathlib import Path
@@ -20,7 +21,6 @@ APP_VERSION = os.getenv("AEGIS_VERSION")
 
 # 2. Fallback: sviluppo locale senza Docker (cerca nella cartella .z/)
 if not APP_VERSION:
-    # Prova il percorso relativo alla radice o alla posizione dello script
     local_path = Path(".z/VERSION")
     script_path = Path(__file__).resolve().parent.parent / ".z" / "VERSION"
     
@@ -74,7 +74,7 @@ class ColorHelpFormatter(argparse.RawTextHelpFormatter):
         colored_heading = f"{UI.CYAN}{UI.BOLD}{heading}{UI.END}"
         super().start_section(colored_heading)
 
-# --- DATABASE MANAGER ---
+# --- DATABASE MANAGER (PyMySQL) ---
 class AegisDB:
     def __init__(self):
         self.conn = None
@@ -84,28 +84,33 @@ class AegisDB:
         for sock in socket_paths:
             if os.path.exists(sock):
                 try:
-                    self.conn = mysql.connector.connect(unix_socket=sock, **{k:v for k,v in DB_CONFIG.items() if k != 'host'})
+                    conn_kwargs = {k: v for k, v in DB_CONFIG.items() if k not in ('host', 'port')}
+                    conn_kwargs['unix_socket'] = sock
+                    conn_kwargs['cursorclass'] = pymysql.cursors.DictCursor
+                    self.conn = pymysql.connect(**conn_kwargs)
                     return
-                except mysql.connector.Error: 
+                except pymysql.Error: 
                     continue
         
         # In alternativa prova via TCP/IP
         try:
-            self.conn = mysql.connector.connect(**DB_CONFIG)
-        except mysql.connector.Error as e:
+            conn_kwargs = DB_CONFIG.copy()
+            conn_kwargs['cursorclass'] = pymysql.cursors.DictCursor
+            self.conn = pymysql.connect(**conn_kwargs)
+        except pymysql.Error as e:
             UI.error(f"Connessione DB fallita: {e}")
             sys.exit(1)
     
     def execute(self, query, params=None):
-        cursor = self.conn.cursor(dictionary=True)
+        cursor = self.conn.cursor()
         cursor.execute(query, params or ())
-        result = cursor.fetchall() if cursor.with_rows else None
+        result = cursor.fetchall() if cursor.description is not None else None
         self.conn.commit()
         cursor.close()
         return result
 
     def close(self): 
-        if self.conn and self.conn.is_connected():
+        if self.conn and self.conn.open:
             self.conn.close()
 
 # --- HELPER PER PARSING CERTIFICATI ---
@@ -166,7 +171,7 @@ class UserManager:
                 try:
                     db.execute("UPDATE users SET username = %s WHERE username = %s", (args.new_username, args.username))
                     UI.success(f"Username modificato da '{args.username}' a '{args.new_username}'.")
-                except mysql.connector.Error as e:
+                except pymysql.Error as e:
                     UI.error(f"Impossibile rinominare l'utente: {e}")
 
             if not args.new_password and not args.new_username:
@@ -246,7 +251,7 @@ class CertManager:
                                 VALUES (%s, %s, 'IT', 'RM', 'Roma', 'Aegis', 'Node', %s, %s, 2048, NOW(), NOW() + INTERVAL 1 YEAR)
                             """, (ca_id, common_name, cert_content, key_content))
                         UI.success(f"Certificato '{common_name}' importato con successo.")
-                except mysql.connector.Error as e:
+                except pymysql.Error as e:
                     UI.error(f"Errore DB durante l'importazione di '{common_name}': {e}")
 
         elif args.action == 'export':
