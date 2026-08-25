@@ -17,7 +17,9 @@
 ![PT](https://img.shields.io/badge/🇵🇹-Português-blue)
 ![RO](https://img.shields.io/badge/🇷🇴-Română-blue)
 
-![Docker Architectures](https://img.shields.io/badge/Arch-amd64%20%7C%20arm64-blue?style=flat&logo=docker)
+![Docker Architectures](https://img.shields.io/badge/Arch-amd64%20%7C%20arm64-red?style=flat&logo=docker)
+![GitHub Release](https://img.shields.io/github/v/release/P1c1s/AegisCA?color=red&style=flat)
+
 # Aegis CA 
 
 
