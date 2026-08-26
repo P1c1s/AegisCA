@@ -70,8 +70,9 @@ if [ ! -d "/data/mysql" ]; then
     mariadbd --user=mysql --datadir=/data > /dev/null 2>&1 &
     tmp_pid="$!"
 
+    # Attesa avvio tramite controllo dell'esistenza del socket Unix
     RETRIES=30
-    until mysqladmin ping --silent || [ $RETRIES -eq 0 ]; do
+    until [ -S /run/mysqld/mysqld.sock ] || [ $RETRIES -eq 0 ]; do
         sleep 1
         RETRIES=$((RETRIES - 1))
     done
@@ -81,32 +82,39 @@ if [ ! -d "/data/mysql" ]; then
         exit 1
     fi
 
-    # Creazione Database, Utente e Privilegi
+    # Creazione Database, Utente e Privilegi via script SQL passati a mariadbd/python3 o mariadb-admin
     log "INFO" "Creating database '$DB_NAME' and configuring user '$DB_USER'..."
-    mysql -e "
-        CREATE DATABASE IF NOT EXISTS \`$DB_NAME\` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-        CREATE USER IF NOT EXISTS '$DB_USER'@'localhost' IDENTIFIED BY '$DB_PASS';
-        CREATE USER IF NOT EXISTS '$DB_USER'@'127.0.0.1' IDENTIFIED BY '$DB_PASS';
-        GRANT ALL PRIVILEGES ON \`$DB_NAME\`.* TO '$DB_USER'@'localhost';
-        GRANT ALL PRIVILEGES ON \`$DB_NAME\`.* TO '$DB_USER'@'127.0.0.1';
-        FLUSH PRIVILEGES;
-    "
+    
+    # Usiamo Python (già installato nell'immagine) con pymysql per eseguire la configurazione iniziale senza client CLI
+    python3 -c "
+import pymysql
+conn = pymysql.connect(unix_socket='/run/mysqld/mysqld.sock', user='root', password='')
+with conn.cursor() as cur:
+    cur.execute(\"CREATE DATABASE IF NOT EXISTS \`$DB_NAME\` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;\")
+    cur.execute(\"CREATE USER IF NOT EXISTS '$DB_USER'@'localhost' IDENTIFIED BY '$DB_PASS';\")
+    cur.execute(\"CREATE USER IF NOT EXISTS '$DB_USER'@'127.0.0.1' IDENTIFIED BY '$DB_PASS';\")
+    cur.execute(\"GRANT ALL PRIVILEGES ON \`$DB_NAME\`.* TO '$DB_USER'@'localhost';\")
+    cur.execute(\"GRANT ALL PRIVILEGES ON \`$DB_NAME\`.* TO '$DB_USER'@'127.0.0.1';\")
+    cur.execute(\"FLUSH PRIVILEGES;\")
+conn.close()
+"
 
     log "INFO" "Database successfully initialized"
 
-    # Spegne il MariaDB temporaneo
-    mysqladmin -u root shutdown > /dev/null 2>&1
+    # Spegne il MariaDB temporaneo tramite kill del PID temporaneo
+    kill -TERM "$tmp_pid" 2>/dev/null || true
     wait "$tmp_pid" 2>/dev/null || true
+    sleep 2
 fi
 
 # ==========================================
 # 2. Avvia MariaDB Silenzioso in Background
 # ==========================================
-# Silenziamo l'output verboso di avvio di InnoDB per non inquinare la console
 mariadbd --user=mysql --datadir=/data > /dev/null 2>&1 &
 
+# Attesa del socket Unix
 RETRIES=15
-until mysqladmin ping --silent || [ $RETRIES -eq 0 ]; do
+until [ -S /run/mysqld/mysqld.sock ] || [ $RETRIES -eq 0 ]; do
     sleep 1
     RETRIES=$((RETRIES - 1))
 done
@@ -119,7 +127,6 @@ CONTAINER_IP=$(hostname -i 2>/dev/null | awk '{print $1}')
 
 log "INFO" "MariaDB service is active and listening"
 log "INFO" "Container IPv4 address: $CONTAINER_IP"
-log "INFO" "Web server ports:"
 log "INFO" "http://$CONTAINER_IP:80 (HTTP, IPv4, OK)"
 log "INFO" "AegisCA engine ready. Starting Apache web server..."
 
