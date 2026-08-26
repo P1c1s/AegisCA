@@ -45,7 +45,7 @@ RUN apk add --no-cache \
            /usr/bin/mysql_embedded \
            /usr/bin/mysql_ldb \
            /usr/bin/mysql_plugin \
-           /usr/bin/mysql_tzinfo_to_sql \
+           /usr/bin/mysql_tzinfo_to_sql 
 
 # 2. Configura MariaDB
 RUN mkdir -p /data /run/mysqld && \
