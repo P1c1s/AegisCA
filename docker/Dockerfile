@@ -9,13 +9,12 @@ LABEL org.opencontainers.image.title="Aegis CA" \
 ARG APP_VERSION=0.0.0
 ENV AEGIS_VERSION=$APP_VERSION
 
-# 1. Dipendenze di Runtime + Pip + Pulizia in un solo LAYER
+# 1. Dipendenze di Runtime + Pip + Pulizia in un solo LAYER (Senza mariadb-client)
 RUN apk add --no-cache \
     apache2 \
     bash \
     curl \
     mariadb \
-    mariadb-client \
     php83 \
     php83-apache2 \
     php83-json \
@@ -41,8 +40,12 @@ RUN apk add --no-cache \
            /var/www/localhost/htdocs/* \
            /usr/share/mariadb/charsets \
            /usr/share/mariadb/english \
-           /usr/share/mariadb/mysql_test \
-           /usr/share/mariadb/sql-bench
+           /usr/bin/mysqlslap \
+           /usr/bin/mysqlbinlog \
+           /usr/bin/mysql_embedded \
+           /usr/bin/mysql_ldb \
+           /usr/bin/mysql_plugin \
+           /usr/bin/mysql_tzinfo_to_sql \
 
 # 2. Configura MariaDB
 RUN mkdir -p /data /run/mysqld && \
@@ -75,6 +78,7 @@ RUN chmod +x /entrypoint.sh
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
   CMD curl -fL -s -o /dev/null http://localhost:80/ || exit 1
 
+  
 EXPOSE 80
 VOLUME ["/data"]
 
