@@ -33,7 +33,7 @@ if (isset($_SESSION['lang']) && in_array($_SESSION['lang'], $supported_langs, tr
     $current_lang = $_SESSION['user_default_lang'];
     $_SESSION['lang'] = $current_lang;
 } else {
-    $current_lang = 'it'; // Imposta il default desiderato (es. 'it' o 'en')
+    $current_lang = 'en'; // Default 
 }
 
 // Alias per compatibilità con i template che usano $currentLang (camelCase)
