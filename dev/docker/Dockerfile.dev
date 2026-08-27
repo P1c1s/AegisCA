@@ -54,10 +54,10 @@ RUN mkdir -p /data /run/mysqld /run/apache2 && \
 # 3. Configurazione e file applicativi
 COPY docker/config/mariadb.cnf /etc/my.cnf.d/mariadb.cnf
 COPY docker/config/httpd.conf /etc/apache2/httpd.conf
-COPY ./web-ui/ /var/www/localhost/htdocs/
+COPY web-ui/ /var/www/localhost/htdocs/
 
-# Copia esclusiva della cartella 'python' come pacchetto 'aegis_ca'
-COPY ./python /usr/lib/python3.11/site-packages/aegis_ca
+# CORRETTO: rimosso il ../../ perché il contesto è già la root
+COPY python/ /usr/lib/python3.11/site-packages/aegis_ca
 COPY docker/entrypoint.sh /entrypoint.sh
 
 # 4. Creo lo script eseguibile per la CLI
