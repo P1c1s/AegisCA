@@ -1,0 +1,18 @@
+services:
+  aegis-ca:
+    image: aegis-ca-local:latest
+    container_name: aegis-ca-local
+    hostname: aegis-ca
+    restart: always
+    environment:
+      - TZ=Europe/Rome
+      - DB_NAME=aegis_ca
+      - DB_USER=admin
+      - DB_PASS=your_srecret!
+    ports:
+      - "8080:80"
+    volumes:
+          - /tmp/aegis-ca_data:/data
+
+volumes:
+  aegis-ca_data:

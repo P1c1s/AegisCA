@@ -1,0 +1,77 @@
+# Contiene il client mysql che in produzione non deve essere presente
+
+FROM alpine:3.19
+
+LABEL org.opencontainers.image.title="Aegis CA" \
+      org.opencontainers.image.description="Aegis CA is a lightweight, secure, and completely self-contained web application for creating, signing, and managing a Local Certificate Authority (CA) and its corresponding self-signed SSL/TLS certificates." \
+      org.opencontainers.image.source="https://github.com/P1c1s/AegisCA" \
+      org.opencontainers.image.licenses="Apache-2.0" \
+      org.opencontainers.image.authors="p1c1s"
+
+ARG APP_VERSION=0.0.0
+ENV AEGIS_VERSION=$APP_VERSION
+
+# 1. Dipendenze di Runtime + Pip + Pulizia in un solo LAYER
+RUN apk add --no-cache \
+    apache2 \
+    bash \
+    curl \
+    mariadb \
+    mariadb-client \
+    php83 \
+    php83-apache2 \
+    php83-json \
+    php83-mysqli \
+    php83-openssl \
+    php83-pdo \
+    php83-pdo_mysql \
+    php83-session \
+    python3 \
+    py3-pip \
+    py3-cryptography \
+    tzdata && \
+    # Installazione pacchetti Python leggeri
+    pip install --no-cache-dir --break-system-packages pymysql tabulate bcrypt && \
+    # Pulizia cache e spazzatura
+    find /usr/lib/python* -type f -name '*.pyc' -delete && \
+    find /usr/lib/python* -type d -name '__pycache__' -delete && \
+    rm -rf /usr/share/man/* \
+           /usr/share/doc/* \
+           /usr/share/info/* \
+           /var/cache/apk/* \
+           /root/.cache \
+           /var/www/localhost/htdocs/* \
+           /usr/share/mariadb/charsets \
+           /usr/share/mariadb/english \
+           /usr/share/mariadb/mysql_test \
+           /usr/share/mariadb/sql-bench
+
+# 2. Configurazione cartelle e permessi base
+RUN mkdir -p /data /run/mysqld /run/apache2 && \
+    chown -R mysql:mysql /data /run/mysqld && \
+    rm -rf /etc/my.cnf.d/* /etc/apache2/conf.d/*
+
+# 3. Configurazione e file applicativi
+COPY docker/config/mariadb.cnf /etc/my.cnf.d/mariadb.cnf
+COPY docker/config/httpd.conf /etc/apache2/httpd.conf
+COPY ./web-ui/ /var/www/localhost/htdocs/
+
+# Copia esclusiva della cartella 'python' come pacchetto 'aegis_ca'
+COPY ./python /usr/lib/python3.11/site-packages/aegis_ca
+COPY docker/entrypoint.sh /entrypoint.sh
+
+# 4. Creo lo script eseguibile per la CLI
+RUN echo '#!/bin/sh' > /usr/local/bin/aegis-ca && \
+    echo 'exec python3 -m aegis_ca "$@"' >> /usr/local/bin/aegis-ca && \
+    chmod +x /usr/local/bin/aegis-ca /entrypoint.sh && \
+    chown -R apache:apache /var/www/localhost/htdocs/
+
+WORKDIR /
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
+  CMD curl -fL -s -o /dev/null http://localhost:80/ || exit 1
+
+EXPOSE 80
+VOLUME ["/data"]
+
+ENTRYPOINT ["/entrypoint.sh"]
