@@ -1,10 +1,7 @@
 <?php
 
-require_once 'User.php';
-
-$pdo = new PDO("mysql:host=localhost;dbname=aegis_ca", "athena", "goat-snake-gorgon", [
-    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION
-]);
+require_once 'config.php';
+require_once '../User.php';
 
 $user = User::signup($pdo, "lorenzo", "password", "en");
 
