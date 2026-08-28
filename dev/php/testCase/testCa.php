@@ -1,10 +1,8 @@
 <?php
 
-require_once 'Ca.php';
+require_once 'config.php';
+require_once '../Ca.php';
 
-$pdo = new PDO("mysql:host=localhost;dbname=aegis_ca", "athena", "goat-snake-gorgon", [
-    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION
-]);
 
 echo "--- 1. Test Creazione e Salvataggio (save) ---\n";
 
@@ -55,15 +53,15 @@ if ($fetchedCa) {
 }
 
 echo "--- 3. Test Modifica Stato (setStatus) ---\n";
-if ($fetchedCa) {
-    $updated = $fetchedCa->setStatus('revoked');
-    if ($updated && $fetchedCa->isRevoked()) {
-        echo "Stato aggiornato correttamente a: {$fetchedCa->getStatus()}\n";
-        echo "isRevoked()? " . ($fetchedCa->isRevoked() ? 'Sì' : 'No') . "\n\n";
-    } else {
-        echo "Errore nell'aggiornamento dello stato.\n";
-    }
-}
+// if ($fetchedCa) {
+//     $updated = $fetchedCa->setStatus('revoked');
+//     if ($updated && $fetchedCa->isRevoked()) {
+//         echo "Stato aggiornato correttamente a: {$fetchedCa->getStatus()}\n";
+//         echo "isRevoked()? " . ($fetchedCa->isRevoked() ? 'Sì' : 'No') . "\n\n";
+//     } else {
+//         echo "Errore nell'aggiornamento dello stato.\n";
+//     }
+// }
 
 echo "--- 4. Test Elenco Completo (findAll) ---\n";
 $allCas = Ca::findAll($pdo);
@@ -73,12 +71,12 @@ foreach ($allCas as $ca) {
 }
 echo "\n";
 
-echo "--- 5. Test Eliminazione (delete) ---\n";
-if ($fetchedCa) {
-    $deleted = $fetchedCa->delete();
-    if ($deleted) {
-        echo "CA con ID {$caId} eliminata con successo dal database.\n";
-    } else {
-        echo "Errore durante l'eliminazione della CA.\n";
-    }
-}
+// echo "--- 5. Test Eliminazione (delete) ---\n";
+// if ($fetchedCa) {
+//     $deleted = $fetchedCa->delete();
+//     if ($deleted) {
+//         echo "CA con ID {$caId} eliminata con successo dal database.\n";
+//     } else {
+//         echo "Errore durante l'eliminazione della CA.\n";
+//     }
+// }

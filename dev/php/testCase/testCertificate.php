@@ -1,0 +1,129 @@
+<?php
+
+require_once 'config.php';
+require_once '../Ca.php';
+require_once '../Certificate.php';
+
+echo "--- 0. Creazione CA di supporto per il test ---\n";
+$mockCaPem = "-----BEGIN CERTIFICATE-----\n" .
+               "MIICljCCAX6gAwIBAgIUVDQ5...ca test...\n" .
+               "-----END CERTIFICATE-----";
+
+$newCa = new Ca(
+    pdo: $pdo,
+    id: null,
+    common_name: "Test Root CA per Certificati " . rand(1000, 9999),
+    subject_country: "IT",
+    subject_state: "Lazio",
+    subject_locality: "Rome",
+    subject_organization: "Aegis Test Corp",
+    subject_org_unit: "Security Dept",
+    key_type: "rsa",
+    key_bits: 4096,
+    crl_distribution_points: "http://crl.example.com/crl",
+    ocsp_server: "http://ocsp.example.com",
+    description: "CA creata automaticamente per testare il certificato",
+    status: "active",
+    valid_from: date('Y-m-d H:i:s'),
+    valid_to: date('Y-m-d H:i:s', strtotime('+10 years')),
+    cert_data: $mockCaPem,
+    created_at: null,
+    key_data: "-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqh...mock...\n-----END PRIVATE KEY-----"
+);
+
+if ($newCa->save()) {
+    echo "CA creata con successo! ID: {$newCa->getId()}\n\n";
+} else {
+    echo "Errore nella creazione della CA di supporto.\n";
+    exit;
+}
+
+$caId = $newCa->getId();
+
+echo "--- 1. Test Creazione e Salvataggio Certificato Foglia (save) ---\n";
+
+$mockCertPem = "-----BEGIN CERTIFICATE-----\n" .
+               "MIICljCCAX6gAwIBAgIUF123...leaf test...\n" .
+               "-----END CERTIFICATE-----";
+
+$mockKeyData = "-----BEGIN PRIVATE KEY-----\n" .
+               "MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQC3...\n" .
+               "-----END PRIVATE KEY-----";
+
+$newCert = new Certificate(
+    pdo: $pdo,
+    id: null,
+    ca_id: $caId,
+    common_name: "test-server-" . rand(1000, 9999) . ".example.com",
+    subject_country: "IT",
+    subject_state: "Lazio",
+    subject_locality: "Rome",
+    subject_organization: "Aegis Test Corp",
+    subject_org_unit: "IT Dept",
+    key_type: "rsa",
+    key_bits: 2048,
+    description: "Certificato SSL foglia creato tramite script di test",
+    status: "active",
+    valid_from: date('Y-m-d H:i:s'),
+    valid_to: date('Y-m-d H:i:s', strtotime('+1 year')),
+    cert_data: $mockCertPem,
+    created_at: null,
+    key_data: $mockKeyData
+);
+
+$saved = $newCert->save();
+if ($saved && $newCert->getId()) {
+    echo "Certificato salvato con successo! ID assegnato: {$newCert->getId()}\n\n";
+} else {
+    echo "Errore durante il salvataggio del certificato.\n";
+    exit;
+}
+
+$certId = $newCert->getId();
+
+echo "--- 2. Test Ricerca (findById) ---\n";
+$fetchedCert = Certificate::findById($pdo, $certId);
+
+if ($fetchedCert) {
+    echo "Trovato Certificato: {$fetchedCert->getCommonName()} [Status: {$fetchedCert->getStatus()}]\n";
+    echo "Emesso da CA ID: {$fetchedCert->getCaId()}\n";
+    echo "Fingerprint SHA-256: {$fetchedCert->getFingerprint('sha256')}\n\n";
+} else {
+    echo "Certificato non trovato con ID {$certId}\n";
+}
+
+echo "--- 3. Test Ricerca per CA (findByCaId) ---\n";
+$certsByCa = Certificate::findByCaId($pdo, $caId);
+echo "Certificati emessi dalla CA ID {$caId}: " . count($certsByCa) . "\n";
+foreach ($certsByCa as $c) {
+    echo " - [ID: {$c->getId()}] {$c->getCommonName()}\n";
+}
+echo "\n";
+
+echo "--- 4. Test Modifica Stato (setStatus) ---\n";
+if ($fetchedCert) {
+    $updated = $fetchedCert->setStatus('revoked');
+    if ($updated && $fetchedCert->isRevoked()) {
+        echo "Stato aggiornato correttamente a: {$fetchedCert->getStatus()}\n";
+        echo "isRevoked()? " . ($fetchedCert->isRevoked() ? 'Sì' : 'No') . "\n\n";
+    } else {
+        echo "Errore nell'aggiornamento dello stato.\n";
+    }
+}
+
+echo "--- 5. Test Elenco Completo (findAll) ---\n";
+$allCerts = Certificate::findAll($pdo);
+echo "Totale certificati nel database: " . count($allCerts) . "\n";
+foreach ($allCerts as $cert) {
+    echo " - [ID: {$cert->getId()}] {$cert->getCommonName()} ({$cert->getStatus()})\n";
+}
+echo "\n";
+
+echo "--- 6. Test Pulizia (Eliminazione Certificato e CA di test) ---\n";
+if ($fetchedCert) {
+    $deletedCert = $fetchedCert->delete();
+    echo "Certificato eliminato: " . ($deletedCert ? "Sì" : "No") . "\n";
+}
+
+$deletedCa = $newCa->delete();
+echo "CA di supporto eliminata: " . ($deletedCa ? "Sì" : "No") . "\n";
