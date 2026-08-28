@@ -65,6 +65,84 @@ class Ca {
     }
 
     /**
+     * Factory method per importare e salvare una CA a partire da blocchi PEM.
+     * 
+     * @param PDO $pdo Istanza di connessione al DB
+     * @param string $certContent Certificato X.509 in formato PEM
+     * @param string|null $keyContent Chiave privata in formato PEM (opzionale)
+     * @param string|null $description Descrizione opzionale
+     * @return self Oggetto Ca salvato e popolato con ID del DB
+     * @throws Exception In caso di errore nella validazione OpenSSL o nel salvataggio
+     */
+    public static function importFromPem(PDO $pdo, string $certContent, ?string $keyContent = null, ?string $description = null): self {
+        $parsed = @openssl_x509_parse($certContent);
+        if (!$parsed) {
+            throw new Exception("Certificato CA non valido o corrotto.");
+        }
+
+        $isCA = isset($parsed['extensions']['basicConstraints']) && strpos($parsed['extensions']['basicConstraints'], 'CA:TRUE') !== false;
+        if (!$isCA) {
+            throw new Exception("Il file caricato non è un'Autorità di Certificazione (BasicConstraints CA:TRUE mancante).");
+        }
+
+        $cn = $parsed['subject']['CN'] ?? 'Unknown CA';
+        $c  = $parsed['subject']['C'] ?? null;
+        $st = $parsed['subject']['ST'] ?? null;
+        $l  = $parsed['subject']['L'] ?? null;
+        $o  = $parsed['subject']['O'] ?? null;
+        $ou = $parsed['subject']['OU'] ?? null;
+        
+        $validFrom = date('Y-m-d H:i:s', $parsed['validFrom_time_t']);
+        $validTo   = date('Y-m-d H:i:s', $parsed['validTo_time_t']);
+
+        $keyBits = 2048;
+        $keyType = 'rsa';
+        $pubKey  = @openssl_pkey_get_public($certContent);
+        if ($pubKey) {
+            $keyDetails = openssl_pkey_get_details($pubKey);
+            if (isset($keyDetails['bits'])) {
+                $keyBits = $keyDetails['bits'];
+            }
+            if (isset($keyDetails['type'])) {
+                $keyType = match ($keyDetails['type']) {
+                    OPENSSL_KEYTYPE_RSA => 'rsa',
+                    OPENSSL_KEYTYPE_EC  => 'ec',
+                    OPENSSL_KEYTYPE_DSA => 'dsa',
+                    default             => 'rsa',
+                };
+            }
+        }
+
+        $ca = new self(
+            pdo: $pdo,
+            id: null,
+            common_name: $cn,
+            subject_country: $c,
+            subject_state: $st,
+            subject_locality: $l,
+            subject_organization: $o,
+            subject_org_unit: $ou,
+            key_type: $keyType,
+            key_bits: $keyBits,
+            crl_distribution_points: null,
+            ocsp_server: null,
+            description: $description ?? 'CA Importata da file PEM',
+            status: 'active',
+            valid_from: $validFrom,
+            valid_to: $validTo,
+            cert_data: $certContent,
+            created_at: null,
+            key_data: $keyContent
+        );
+
+        if (!$ca->save()) {
+            throw new Exception("Errore durante il salvataggio della CA nel database.");
+        }
+
+        return $ca;
+    }
+
+    /**
      * Recupera tutte le CA ordinate per data di creazione.
      * @return self[]
      */
@@ -200,7 +278,7 @@ class Ca {
         $success = $stmt->execute([$this->id]);
 
         if ($success) {
-            $this->id = 0;
+            $this->id = null;
             $this->common_name = '';
             $this->cert_data = null;
             $this->key_data = null;

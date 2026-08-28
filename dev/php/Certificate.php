@@ -62,6 +62,88 @@ class Certificate {
     }
 
     /**
+     * Factory method per importare e salvare un Certificato foglia a partire da blocchi PEM.
+     * 
+     * @param PDO $pdo Istanza di connessione al DB
+     * @param int|null $caId ID della CA emittente (se presente nel DB)
+     * @param string $certContent Certificato X.509 in formato PEM
+     * @param string|null $keyContent Chiave privata in formato PEM (opzionale)
+     * @param string|null $description Descrizione opzionale
+     * @return self Oggetto Certificate salvato e popolato con ID del DB
+     * @throws Exception In caso di errore nella validazione OpenSSL o nel salvataggio
+     */
+    public static function importFromPem(
+        PDO $pdo, 
+        ?int $caId, 
+        string $certContent, 
+        ?string $keyContent = null, 
+        ?string $description = null
+    ): self {
+        $parsed = @openssl_x509_parse($certContent);
+        if (!$parsed) {
+            throw new Exception("Certificato non valido o corrotto.");
+        }
+
+        $cn = $parsed['subject']['CN'] ?? 'Unknown Cert';
+        $c  = $parsed['subject']['C'] ?? null;
+        $st = $parsed['subject']['ST'] ?? null;
+        $l  = $parsed['subject']['L'] ?? null;
+        $o  = $parsed['subject']['O'] ?? null;
+        $ou = $parsed['subject']['OU'] ?? null;
+
+        $validFromTimestamp = $parsed['parsed']['validFrom_time_t'] ?? $parsed['validFrom_time_t'] ?? null;
+        $validToTimestamp   = $parsed['parsed']['validTo_time_t']   ?? $parsed['validTo_time_t']   ?? null;
+
+        $validFrom = $validFromTimestamp ? date('Y-m-d H:i:s', $validFromTimestamp) : date('Y-m-d H:i:s');
+        $validTo   = $validToTimestamp   ? date('Y-m-d H:i:s', $validToTimestamp)   : date('Y-m-d H:i:s');
+
+        $keyBits = 2048;
+        $keyType = 'rsa';
+        $pubKey  = @openssl_pkey_get_public($certContent);
+        if ($pubKey) {
+            $keyDetails = openssl_pkey_get_details($pubKey);
+            if (isset($keyDetails['bits'])) {
+                $keyBits = $keyDetails['bits'];
+            }
+            if (isset($keyDetails['type'])) {
+                $keyType = match ($keyDetails['type']) {
+                    OPENSSL_KEYTYPE_RSA => 'rsa',
+                    OPENSSL_KEYTYPE_EC  => 'ec',
+                    OPENSSL_KEYTYPE_DSA => 'dsa',
+                    default             => 'rsa',
+                };
+            }
+        }
+
+        $cert = new self(
+            pdo: $pdo,
+            id: null,
+            ca_id: $caId,
+            common_name: $cn,
+            subject_country: $c,
+            subject_state: $st,
+            subject_locality: $l,
+            subject_organization: $o,
+            subject_org_unit: $ou,
+            key_type: $keyType,
+            key_bits: $keyBits,
+            description: $description ?? 'Certificato importato da file PEM',
+            status: 'active',
+            valid_from: $validFrom,
+            valid_to: $validTo,
+            cert_data: $certContent,
+            created_at: null,
+            key_data: $keyContent
+        );
+
+        if (!$cert->save()) {
+            throw new Exception("Errore durante il salvataggio del certificato nel database.");
+        }
+
+        return $cert;
+    }
+
+    /**
      * Recupera tutti i certificati ordinati per data di creazione.
      * @return self[]
      */
@@ -227,7 +309,7 @@ class Certificate {
         $success = $stmt->execute([$this->id]);
 
         if ($success) {
-            $this->id = 0;
+            $this->id = null;
             $this->common_name = '';
             $this->cert_data = null;
             $this->key_data = null;
