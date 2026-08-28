@@ -1,8 +1,19 @@
 <?php
+// tests/test_certificate.php
 
 require_once 'config.php';
+require_once '../User.php';
+require_once '../Auth.php';
 require_once '../Ca.php';
 require_once '../Certificate.php';
+
+// Avviamo la sessione e simuliamo il login per superare i controlli di sicurezza (Auth::isLoggedIn)
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+$testUser = User::signup($pdo, "certtest_" . rand(1000, 9999), "Password123!", "it");
+Auth::login($pdo, $testUser->getUsername(), "Password123!");
 
 echo "--- 0. Creazione CA di supporto per il test ---\n";
 $mockCaPem = "-----BEGIN CERTIFICATE-----\n" .
@@ -35,6 +46,7 @@ if ($newCa->save()) {
     echo "CA creata con successo! ID: {$newCa->getId()}\n\n";
 } else {
     echo "Errore nella creazione della CA di supporto.\n";
+    $testUser->delete();
     exit;
 }
 
@@ -76,20 +88,32 @@ if ($saved && $newCert->getId()) {
     echo "Certificato salvato con successo! ID assegnato: {$newCert->getId()}\n\n";
 } else {
     echo "Errore durante il salvataggio del certificato.\n";
+    $newCa->delete();
+    $testUser->delete();
     exit;
 }
 
 $certId = $newCert->getId();
 
-echo "--- 2. Test Ricerca (findById) ---\n";
+echo "--- 2. Test Ricerca (findById) e Getter Sicuri ---\n";
 $fetchedCert = Certificate::findById($pdo, $certId);
 
 if ($fetchedCert) {
     echo "Trovato Certificato: {$fetchedCert->getCommonName()} [Status: {$fetchedCert->getStatus()}]\n";
     echo "Emesso da CA ID: {$fetchedCert->getCaId()}\n";
-    echo "Fingerprint SHA-256: {$fetchedCert->getFingerprint('sha256')}\n\n";
+    echo "Fingerprint SHA-256: {$fetchedCert->getFingerprint('sha256')}\n";
+    
+    // Testiamo i wrapper protetti da Auth
+    try {
+        $certDataCheck = !empty($fetchedCert->getCertData()) ? "Presente (Protetto OK)" : "Vuoto";
+        $keyDataCheck  = !empty($fetchedCert->getKeyData()) ? "Presente (Protetto OK)" : "Vuoto";
+        echo " - Cert Data: {$certDataCheck}\n";
+        echo " - Key Data: {$keyDataCheck}\n\n";
+    } catch (Exception $e) {
+        echo "Errore nei dati protetti: " . $e->getMessage() . "\n\n";
+    }
 } else {
-    echo "Certificato non trovato con ID {$certId}\n";
+    echo "Certificato non trovato con ID {$certId}\n\n";
 }
 
 echo "--- 3. Test Ricerca per CA (findByCaId) ---\n";
@@ -107,7 +131,7 @@ if ($fetchedCert) {
         echo "Stato aggiornato correttamente a: {$fetchedCert->getStatus()}\n";
         echo "isRevoked()? " . ($fetchedCert->isRevoked() ? 'Sì' : 'No') . "\n\n";
     } else {
-        echo "Errore nell'aggiornamento dello stato.\n";
+        echo "Errore nell'aggiornamento dello stato.\n\n";
     }
 }
 
@@ -122,8 +146,20 @@ echo "\n";
 echo "--- 6. Test Pulizia (Eliminazione Certificato e CA di test) ---\n";
 if ($fetchedCert) {
     $deletedCert = $fetchedCert->delete();
-    echo "Certificato eliminato: " . ($deletedCert ? "Sì" : "No") . "\n";
+    if ($deletedCert) {
+        echo "Certificato eliminato dal DB con successo.\n";
+        echo "Stato post-delete dell'oggetto in RAM:\n";
+        echo " - ID (atteso 0): {$fetchedCert->getId()}\n";
+        echo " - Common Name (atteso vuoto): '{$fetchedCert->getCommonName()}'\n\n";
+    } else {
+        echo "Errore durante l'eliminazione del certificato.\n\n";
+    }
 }
 
 $deletedCa = $newCa->delete();
-echo "CA di supporto eliminata: " . ($deletedCa ? "Sì" : "No") . "\n";
+echo "CA di supporto eliminata: " . ($deletedCa ? "Sì" : "No") . "\n\n";
+
+// Pulizia finale dell'utente di supporto e chiusura sessione
+Auth::logout();
+$testUser->delete();
+echo "Tutti i test sui certificati sono stati completati e il database è pulito!\n";
