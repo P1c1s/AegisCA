@@ -1,4 +1,5 @@
 <?php
+// src/Classes/Ca.php
 
 class Ca {
     private ?PDO $pdo;
@@ -18,7 +19,7 @@ class Ca {
     private string $valid_from;
     private string $valid_to;
     private ?string $cert_data;
-    private ?string $key_data; // Gestita internamente
+    private ?string $key_data; 
     private ?string $created_at;
 
     public function __construct(
@@ -40,7 +41,7 @@ class Ca {
         string $valid_to,
         ?string $cert_data,
         ?string $created_at,
-        ?string $key_data = null // Spostato alla fine come opzionale per non rompere il tuo script di test
+        ?string $key_data = null
     ) {
         $this->pdo = $pdo;
         $this->id = $id;
@@ -98,9 +99,6 @@ class Ca {
         return $cas;
     }
 
-    /**
-     * Trova una CA tramite il suo ID.
-     */
     public static function findById(PDO $pdo, int $id): ?self {
         $stmt = $pdo->prepare("SELECT * FROM cas WHERE id = :id");
         $stmt->execute(['id' => $id]);
@@ -176,9 +174,6 @@ class Ca {
         return $success;
     }
 
-    /**
-     * Aggiorna SOLO lo status della CA nel database (es. per revocarla).
-     */
     public function setStatus(string $status): bool {
         if (!$this->pdo || !$this->id) {
             return false;
@@ -197,20 +192,23 @@ class Ca {
         return $success;
     }
 
-    /**
-     * Elimina la CA dal database.
-     */
     public function delete(): bool {
         if (!$this->pdo || !$this->id) {
             return false;
         }
         $stmt = $this->pdo->prepare("DELETE FROM cas WHERE id = ?");
-        return $stmt->execute([$this->id]);
+        $success = $stmt->execute([$this->id]);
+
+        if ($success) {
+            $this->id = 0;
+            $this->common_name = '';
+            $this->cert_data = null;
+            $this->key_data = null;
+        }
+
+        return $success;
     }
 
-    /**
-     * Calcola il fingerprint del certificato (SHA-256 o SHA-1).
-     */
     public function getFingerprint(string $algo = 'sha256'): string {
         $pemCert = $this->cert_data ?? '';
         if (empty(trim($pemCert))) return '-';
@@ -231,7 +229,20 @@ class Ca {
         }
     }
 
-    // --- Controlli di stato ---
+    private function getSecureCertData(): ?string {
+        if (!class_exists('Auth') || !Auth::isLoggedIn()) {
+            throw new Exception("Accesso negato: è richiesta l'autenticazione per accedere al certificato.");
+        }
+        return $this->cert_data;
+    }
+
+    private function getSecureKeyData(): ?string {
+        if (!class_exists('Auth') || !Auth::isLoggedIn()) {
+            throw new Exception("Accesso negato: è richiesta l'autenticazione per accedere alla chiave privata.");
+        }
+        return $this->key_data;
+    }
+
     public function isExpired(): bool {
         return strtotime($this->valid_to) < time();
     }
@@ -240,7 +251,6 @@ class Ca {
         return $this->status === 'revoked';
     }
 
-    // --- Getter ---
     public function getId(): ?int { return $this->id; }
     public function getCommonName(): string { return $this->common_name; }
     public function getSubjectCountry(): ?string { return $this->subject_country; }
@@ -255,8 +265,10 @@ class Ca {
     public function getDescription(): ?string { return $this->description; }
     public function getStatus(): string { return $this->status; }
     public function getValidFrom(): string { return $this->valid_from; }
-    public function getvalidTo(): string { return $this->valid_to; }
-    public function getCertData(): ?string { return $this->cert_data; }
-    public function getKeyData(): ?string { return $this->key_data; }
+    public function getValidTo(): string { return $this->valid_to; }
     public function getCreatedAt(): ?string { return $this->created_at; }
+    
+    // Wrapper sicuri: all'esterno sembrano getter normali, ma internamente verificano l'autorizzazione
+    public function getCertData(): ?string { return $this->getSecureCertData(); }
+    public function getKeyData(): ?string { return $this->getSecureKeyData(); }
 }
