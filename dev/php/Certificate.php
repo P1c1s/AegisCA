@@ -95,9 +95,6 @@ class Certificate {
         return $certificates;
     }
 
-    /**
-     * Trova un certificato tramite il suo ID.
-     */
     public static function findById(PDO $pdo, int $id): ?self {
         $stmt = $pdo->prepare("SELECT * FROM certificates WHERE id = :id");
         $stmt->execute(['id' => $id]);
@@ -162,9 +159,6 @@ class Certificate {
         return $certificates;
     }
 
-    /**
-     * Salva un nuovo certificato nel database.
-     */
     public function save(): bool {
         if (!$this->pdo) {
             throw new Exception("Connessione PDO non disponibile.");
@@ -282,6 +276,25 @@ class Certificate {
 
     public function isRevoked(): bool {
         return $this->status === 'revoked';
+    }
+
+    public static function countAll(PDO $pdo): int {
+        return (int)$pdo->query("SELECT COUNT(*) FROM certificates")->fetchColumn();
+    }
+
+    public static function getExpiryStats(PDO $pdo): array {
+        $stmt = $pdo->query("
+            SELECT 
+                SUM(CASE WHEN valid_to < NOW() THEN 1 ELSE 0 END) AS expired_certs,
+                SUM(CASE WHEN valid_to >= NOW() THEN 1 ELSE 0 END) AS active_certs
+            FROM certificates
+        ");
+        $stats = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        return [
+            'expired' => (int)($stats['expired_certs'] ?? 0),
+            'active'  => (int)($stats['active_certs'] ?? 0)
+        ];
     }
 
     public function getId(): ?int { return $this->id; }

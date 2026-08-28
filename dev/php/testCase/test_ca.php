@@ -89,9 +89,10 @@ if ($fetchedCa) {
     }
 }
 
-echo "--- 4. Test Elenco Completo (findAll) ---\n";
+echo "--- 4. Test Elenco Completo (findAll) e Conteggio (countAll) ---\n";
+$totalCount = Ca::countAll($pdo);
 $allCas = Ca::findAll($pdo);
-echo "Totale CA nel database: " . count($allCas) . "\n";
+echo "Totale CA nel database (countAll): {$totalCount} | (count array): " . count($allCas) . "\n";
 foreach ($allCas as $ca) {
     echo " - [ID: {$ca->getId()}] {$ca->getCommonName()} ({$ca->getStatus()})\n";
 }
@@ -102,9 +103,10 @@ if ($fetchedCa) {
     $deleted = $fetchedCa->delete();
     if ($deleted) {
         echo "CA con ID {$caId} eliminata dal DB.\n";
-        // Verifichiamo che la memoria dell'oggetto sia stata pulita come implementato nel metodo delete()
+        // Verifichiamo che la memoria dell'oggetto sia stata pulita (ID a null e stringhe vuote)
+        $printId = $fetchedCa->getId() ?? 'null (corretto)';
         echo "Stato post-delete dell'oggetto in RAM:\n";
-        echo " - ID (atteso 0): {$fetchedCa->getId()}\n";
+        echo " - ID (atteso null): {$printId}\n";
         echo " - Common Name (atteso vuoto): '{$fetchedCa->getCommonName()}'\n\n";
     } else {
         echo "Errore durante l'eliminazione della CA.\n\n";
@@ -114,9 +116,9 @@ if ($fetchedCa) {
 // Pulizia finale dell'utente di supporto del test
 Auth::logout();
 $testUser->delete();
-if ($testUser->getUsername() == "None") {
-    echo "Variabile utente svuotata.\n";
+if ($testUser->getUsername() === "") {
+    echo "Variabile utente svuotata correttamente.\n";
 } else {
-    echo "Errore nello svuotamento della variabile.\n";
+    echo "Errore nello svuotamento della variabile utente.\n";
 }
 echo "Test completati e database pulito con successo!\n";

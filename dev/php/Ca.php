@@ -250,6 +250,10 @@ class Ca {
     public function isRevoked(): bool {
         return $this->status === 'revoked';
     }
+ 
+    public static function countAll(PDO $pdo): int {
+        return (int)$pdo->query("SELECT COUNT(*) FROM cas")->fetchColumn();
+    }
 
     public function getId(): ?int { return $this->id; }
     public function getCommonName(): string { return $this->common_name; }

@@ -135,9 +135,10 @@ if ($fetchedCert) {
     }
 }
 
-echo "--- 5. Test Elenco Completo (findAll) ---\n";
+echo "--- 5. Test Elenco Completo (findAll) e Conteggio (countAll) ---\n";
+$totalCount = Certificate::countAll($pdo);
 $allCerts = Certificate::findAll($pdo);
-echo "Totale certificati nel database: " . count($allCerts) . "\n";
+echo "Totale certificati nel database (countAll): {$totalCount} | (count array): " . count($allCerts) . "\n";
 foreach ($allCerts as $cert) {
     echo " - [ID: {$cert->getId()}] {$cert->getCommonName()} ({$cert->getStatus()})\n";
 }
@@ -148,8 +149,9 @@ if ($fetchedCert) {
     $deletedCert = $fetchedCert->delete();
     if ($deletedCert) {
         echo "Certificato eliminato dal DB con successo.\n";
+        $printId = $fetchedCert->getId() ?? 'null (corretto)';
         echo "Stato post-delete dell'oggetto in RAM:\n";
-        echo " - ID (atteso 0): {$fetchedCert->getId()}\n";
+        echo " - ID (atteso null): {$printId}\n";
         echo " - Common Name (atteso vuoto): '{$fetchedCert->getCommonName()}'\n\n";
     } else {
         echo "Errore durante l'eliminazione del certificato.\n\n";
@@ -162,4 +164,9 @@ echo "CA di supporto eliminata: " . ($deletedCa ? "Sì" : "No") . "\n\n";
 // Pulizia finale dell'utente di supporto e chiusura sessione
 Auth::logout();
 $testUser->delete();
+if ($testUser->getUsername() === "") {
+    echo "Variabile utente svuotata correttamente.\n";
+} else {
+    echo "Errore nello svuotamento della variabile utente.\n";
+}
 echo "Tutti i test sui certificati sono stati completati e il database è pulito!\n";

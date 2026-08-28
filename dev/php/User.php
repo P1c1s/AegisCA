@@ -3,7 +3,7 @@
 
 class User {
     private ?PDO $pdo;
-    private int $id;
+    private ?int $id;
     private string $username;
     private string $password;
     private string $default_lang;
@@ -86,9 +86,9 @@ class User {
         $success = $stmt->execute(['id' => $this->id]);
 
         if ($success) {
-            $this->id = 0;
-            $this->username = 'None';
-            $this->password = 'None';
+            $this->id = null;
+            $this->username = '';
+            $this->password = '';
         }
 
         return $success;
