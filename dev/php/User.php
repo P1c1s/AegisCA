@@ -1,4 +1,5 @@
 <?php
+// src/Classes/User.php
 
 class User {
     private ?PDO $pdo;
@@ -17,46 +18,33 @@ class User {
         $this->created_at = $created_at;
     }
 
-    public static function login(PDO $pdo, string $username, string $passwordInput): ?self {
-        $stmt = $pdo->prepare("SELECT id, username, password, default_lang, created_at FROM users WHERE username = :username");
-        $stmt->execute(['username' => $username]);
-        
+    public static function findById(PDO $pdo, int $id): ?self {
+        $stmt = $pdo->prepare("SELECT id, username, password, default_lang, created_at FROM users WHERE id = :id");
+        $stmt->execute(['id' => $id]);
         $data = $stmt->fetch(PDO::FETCH_ASSOC);
-        if (!$data || !password_verify($passwordInput, $data['password'])) {
-            return null;
-        }
+        if (!$data) return null;
 
-        return new self(
-            $pdo,
-            (int)$data['id'],
-            $data['username'],
-            $data['password'],
-            $data['default_lang'],
-            new DateTimeImmutable($data['created_at'])
-        );
+        return new self($pdo, (int)$data['id'], $data['username'], $data['password'], $data['default_lang'], new DateTimeImmutable($data['created_at']));
     }
 
-public static function signup(PDO $pdo, string $username, string $passwordInput, string $default_lang = 'en'): ?self {
-        // 1. Controlliamo se esiste già un utente con lo stesso username
-        $checkStmt = $pdo->prepare("SELECT id FROM users WHERE username = :username");
-        $checkStmt->execute(['username' => $username]);
-        
-        if ($checkStmt->fetch()) {
-            echo "Utente già registrato\n";
-            return null; 
-            // In alternativa (stile Java), si potrebbe fare: 
-            // throw new Exception("Username già in uso.");
+    public static function findByUsername(PDO $pdo, string $username): ?self {
+        $stmt = $pdo->prepare("SELECT id, username, password, default_lang, created_at FROM users WHERE username = :username");
+        $stmt->execute(['username' => $username]);
+        $data = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$data) return null;
+
+        return new self($pdo, (int)$data['id'], $data['username'], $data['password'], $data['default_lang'], new DateTimeImmutable($data['created_at']));
+    }
+
+    public static function signup(PDO $pdo, string $username, string $passwordInput, string $default_lang = 'it'): ?self {
+        if (self::findByUsername($pdo, $username)) {
+            return null; // Utente già esistente
         }
 
-        // 2. Se non esiste, procediamo con la creazione
         $hashedPassword = password_hash($passwordInput, PASSWORD_BCRYPT);
         $createdAt = new DateTimeImmutable();
         
-        $stmt = $pdo->prepare("
-            INSERT INTO users (username, password, default_lang, created_at) 
-            VALUES (:username, :password, :default_lang, :created_at)
-        ");
-        
+        $stmt = $pdo->prepare("INSERT INTO users (username, password, default_lang, created_at) VALUES (:username, :password, :default_lang, :created_at)");
         $stmt->execute([
             'username'     => $username,
             'password'     => $hashedPassword,
@@ -64,28 +52,18 @@ public static function signup(PDO $pdo, string $username, string $passwordInput,
             'created_at'   => $createdAt->format('Y-m-d H:i:s')
         ]);
 
-        $id = (int)$pdo->lastInsertId();
-
-        return new self(
-            $pdo,
-            $id,
-            $username,
-            $hashedPassword,
-            $default_lang,
-            $createdAt
-        );
+        return new self($pdo, (int)$pdo->lastInsertId(), $username, $hashedPassword, $default_lang, $createdAt);
     }
 
-    // --- Setter con salvataggio automatico sul DB ---
-
-    public function setUsername(string $username): void {
-        $this->username = $username;
-        $this->updateDatabase('username', $username);
+    public function verifyPassword(string $passwordInput): bool {
+        return password_verify($passwordInput, $this->password);
     }
 
-    public function setDefaultLang(string $default_lang): void {
-        $this->default_lang = $default_lang;
-        $this->updateDatabase('default_lang', $default_lang);
+    // --- Metodi di modifica dati utente ---
+
+    public function setDefaultLang(string $lang): void {
+        $this->default_lang = $lang;
+        $this->updateDatabase('default_lang', $lang);
     }
 
     public function setPassword(string $newPassword): void {
@@ -95,14 +73,9 @@ public static function signup(PDO $pdo, string $username, string $passwordInput,
     }
 
     private function updateDatabase(string $field, mixed $value): void {
-        if (!$this->pdo) {
-            throw new Exception("Connessione PDO non disponibile.");
-        }
+        if (!$this->pdo) throw new Exception("Connessione PDO non disponibile.");
         $stmt = $this->pdo->prepare("UPDATE users SET {$field} = :value WHERE id = :id");
-        $stmt->execute([
-            'value' => $value,
-            'id'    => $this->id
-        ]);
+        $stmt->execute(['value' => $value, 'id' => $this->id]);
     }
 
     // --- Getter ---
@@ -110,11 +83,4 @@ public static function signup(PDO $pdo, string $username, string $passwordInput,
     public function getUsername(): string { return $this->username; }
     public function getDefaultLang(): string { return $this->default_lang; }
     public function getCreatedAt(): DateTimeImmutable { return $this->created_at; }
-
-    // DA CAPIRE DOVE E COME USARLO
-    public static function isLoggedIn() {
-        return isset($_SESSION['user_id']);
-    }
 }
-
-?>
