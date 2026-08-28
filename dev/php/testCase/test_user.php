@@ -22,7 +22,7 @@ $foundById = User::findById($pdo, $userId);
 $foundByName = User::findByUsername($pdo, $username);
 
 if ($foundById && $foundByName) {
-    echo "Utente trovato correttamente tramite ID e Username!\n\n";
+    echo "Utente " . $username . "trovato correttamente tramite ID e Username!\n\n";
 } else {
     echo "Errore nella ricerca dell'utente.\n";
 }

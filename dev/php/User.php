@@ -59,8 +59,6 @@ class User {
         return password_verify($passwordInput, $this->password);
     }
 
-    // --- Metodi di modifica dati utente ---
-
     public function setDefaultLang(string $lang): void {
         $this->default_lang = $lang;
         $this->updateDatabase('default_lang', $lang);
@@ -78,7 +76,24 @@ class User {
         $stmt->execute(['value' => $value, 'id' => $this->id]);
     }
 
-    // --- Getter ---
+    public function delete(): bool {
+        if (!$this->pdo) {
+            throw new Exception("Connessione PDO non disponibile.");
+        }
+        
+        $stmt = $this->pdo->prepare("DELETE FROM users WHERE id = :id");
+        $state = $stmt->execute(['id' => $this->id]);
+        $success = $stmt->execute(['id' => $this->id]);
+
+        if ($success) {
+            $this->id = 0;
+            $this->username = 'None';
+            $this->password = 'None';
+        }
+
+        return $success;
+    }
+
     public function getId(): int { return $this->id; }
     public function getUsername(): string { return $this->username; }
     public function getDefaultLang(): string { return $this->default_lang; }

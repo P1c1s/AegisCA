@@ -49,6 +49,10 @@ if (!Auth::isLoggedIn() && empty($_SESSION['user_id'])) {
 }
 
 echo "--- 4. Pulizia (Eliminazione utente di supporto) ---\n";
-$stmt = $pdo->prepare("DELETE FROM users WHERE id = ?");
-$stmt->execute([$user->getId()]);
-echo "Utente di supporto rimosso dal database.\n";
+$delete = $user->delete();
+
+if ($delete) {
+    echo "Utente " . $user->getUsername() . " eliminato correttamente";
+} else {
+    echo "Errore nell'eliminazione dell'utente\n\n";
+}
