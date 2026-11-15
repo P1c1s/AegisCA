@@ -57,7 +57,7 @@ COPY docker/config/httpd.conf /etc/apache2/httpd.conf
 COPY web-ui/ /var/www/localhost/htdocs/
 
 # Copia della cartella python nel path dei moduli di Python 3.11
-COPY python/ /usr/lib/python3.11/site-packages/aegis_ca
+# COPY python/ /usr/lib/python3.11/site-packages/aegis_ca
 COPY docker/entrypoint.sh /entrypoint.sh
 
 # 4. Creo lo script eseguibile per la CLI
@@ -66,7 +66,7 @@ RUN echo '#!/bin/sh' > /usr/local/bin/aegis-ca && \
     chmod +x /usr/local/bin/aegis-ca /entrypoint.sh && \
     chown -R apache:apache /var/www/localhost/htdocs/
 
-WORKDIR /
+WORKDIR /var/www/localhost/htdocs
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
   CMD curl -fL -s -o /dev/null http://localhost:80/ || exit 1

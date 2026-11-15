@@ -68,7 +68,7 @@ RUN chmod +x /bin/aegis-ca.py && \
 
 # 6. Permessi e directory di lavoro
 RUN chown -R apache:apache /var/www/localhost/htdocs/
-WORKDIR /
+WORKDIR /var/www/localhost/htdocs
 
 # 7. Entrypoint
 COPY docker/entrypoint.sh /entrypoint.sh

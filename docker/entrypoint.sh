@@ -119,6 +119,19 @@ until [ -S /run/mysqld/mysqld.sock ] || [ $RETRIES -eq 0 ]; do
     RETRIES=$((RETRIES - 1))
 done
 
+
+# ==========================================
+# Configurazione Sicurezza PHP (Disable Functions)
+# ==========================================
+PHP_INI_DIR="/etc/php83/conf.d"
+[ ! -d "$PHP_INI_DIR" ] && PHP_INI_DIR="/etc/php8/conf.d"
+
+mkdir -p "$PHP_INI_DIR"
+cat << 'EOF' > "$PHP_INI_DIR/99_security.ini"
+disable_functions = exec,passthru,shell_exec,system,proc_open,popen,curl_exec,curl_multi_exec,parse_ini_file,show_source
+EOF
+log "INFO" "PHP security restrictions applied: disabled high-risk functions."
+
 # ==========================================
 # 3. Rilevamento IP, Log Informativi e Avvio
 # ==========================================
@@ -129,6 +142,7 @@ log "INFO" "MariaDB service is active and listening"
 log "INFO" "Container IPv4 address: $CONTAINER_IP"
 log "INFO" "http://$CONTAINER_IP:80 (HTTP, IPv4, OK)"
 log "INFO" "AegisCA engine ready. Starting Apache web server..."
+
 
 # 3 righe vuote prima dei log di Apache
 echo ""
