@@ -109,6 +109,7 @@ Aegis CA follows a **No Framework** philosophy, prioritizing simplicity, code re
 * PHP 8 (OOP)
 * Native OpenSSL extension (`php_openssl`)
 * No use of `exec()` or external OpenSSL calls
+* Default disabled in the PHP configuration for security reasons (exec, passthru, shell_exec, system, proc_open, etc.).
 
 ## Database
 
