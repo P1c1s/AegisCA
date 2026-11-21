@@ -168,8 +168,7 @@ docker run -d \
 ```
 #### Docker Compose
 
-Download the [docker-compose.yml](https://github.com/P1c1s/AegisCA/blob/main/docker-compose.yml
-) file from the repository, or create one locally. Then start the stack using Docker.
+Download the [docker-compose.yml](https://github.com/P1c1s/AegisCA/blob/main/docker/docker-compose.yml) file from the repository, or create one locally. Then start the stack using Docker.
 
 ```bash
 docker compose up -d
